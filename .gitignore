@@ -1,0 +1,23 @@
+# Cargo build output, including member-local targets used by profiling runs.
+target/
+*.profraw
+*.data
+
+# Local profiling output and temporary analysis artifacts.
+/profile_traces/
+/tmp/
+
+# macOS metadata.
+.DS_Store
+
+# Local-only drafts
+/_docs/
+/results/
+.cargo/config.toml
+
+# Python bytecode from the spec check scripts.
+__pycache__/
+*.pyc
+
+# Agent worktrees created under the repository.
+.claude/worktrees/

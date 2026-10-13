@@ -1,0 +1,101 @@
+# Release-speed test profile for CI: prover kernels are unusable under the
+# dev profile on hosted runners, but assertion coverage must survive.
+[profile.ci]
+inherits = "release"
+debug-assertions = true
+overflow-checks = true
+
+# Fast local iteration: the leaf crate under edit compiles at opt 1
+# while the heavy dependency graph (akita, jolt) stays optimized and
+# cached. Benches and tier-2 gates still use --release.
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[workspace]
+resolver = "2"
+members = [
+  "crates/aerie",
+  "crates/aerie-falcon",
+  "crates/aerie-invariants",
+  "crates/aerie-keccak",
+  "crates/aerie-simd",
+  "crates/aerie-falcon-native",
+  "crates/aerie-profiling",
+  "crates/aerie-pcs-config",
+  "crates/aerie-falcon-statement",
+]
+
+# Every external dependency is declared once here; member crates reference
+# them with `workspace = true` and may add crate-specific features.
+[workspace.package]
+version = "0.2.0"
+
+[workspace.dependencies]
+aerie-keccak = { path = "crates/aerie-keccak" }
+aerie-simd = { path = "crates/aerie-simd" }
+aerie-falcon-native = { path = "crates/aerie-falcon-native" }
+aerie-profiling = { path = "crates/aerie-profiling" }
+
+# Pin upstream Akita and its exact jolt-field revision together.
+# The revision is on Akita's `dev` branch: the commit that merged Akita
+# `main` into `dev` (LayerZero-Labs/akita#196).
+# Advance them deliberately; a local checkout can still override them
+# through a `[patch]` table in the untracked .cargo/config.toml.
+akita-algebra = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-challenges = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+# `dev-protocol` selects Akita's dev protocol for every Akita crate in the
+# build (Cargo unifies the feature through `akita-params`). The terminal
+# response then omits the last live block of `e` and of `t`; the verifier
+# recomputes each and checks it against a 32-byte digest. The planner prices
+# proofs for that wire format, so the catalogs under
+# `crates/aerie-pcs-config/src/schedules/` are generated with it on.
+akita-config = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false, features = [
+  "dev-protocol",
+] }
+akita-error = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+jolt-field = { git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false, features = [
+  "solinas",
+] }
+jolt-poly = { git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false }
+akita-params = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-pcs = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false }
+akita-planner = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-serialization = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-sumcheck = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-transcript = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false, features = [
+  "transcript-blake2b",
+] }
+akita-types = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+# The Spongefish revision Akita pins. Aerie uses its native Spongefish API
+# directly for the framed PIOP stream with the Blake2b backend. Spongefish at
+# this revision imports its `StdHash` from the `sha3` feature even when only
+# Blake2b is used, so that feature is requested here explicitly.
+spongefish = { git = "https://github.com/arkworks-rs/spongefish", rev = "ef9741346a150039427d9e0c02d6b2d73e93ec81", default-features = false, features = [
+  "blake2",
+  "sha3",
+] }
+
+fn-dsa = "=0.3.0"
+hybrid-array = "0.4.12"
+keccak = { version = "0.2.0", features = ["parallel"] }
+libc = "0.2"
+rayon = "1.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+shake = "0.1.0"
+sha3-legacy = { package = "sha3", version = "0.10.9" }
+# Trimmed features: the monitor needs only system (CPU + process) info.
+sysinfo = { version = "0.39", default-features = false, features = ["system"] }
+# Already in the audited lockfile transitively (akita, jolt); declaring it here
+# adds no new packages.
+thiserror = "2"
+# tracing 0.1 is already in the audited lockfile transitively (akita, jolt);
+# declaring it here adds no new packages. tracing-chrome and sysinfo are the
+# deliberate lockfile additions of specs/techniques/profiling.md section 8.
+tracing = "0.1"
+tracing-chrome = "0.7"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }

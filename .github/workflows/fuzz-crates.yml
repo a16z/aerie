@@ -1,0 +1,82 @@
+name: Fuzz crates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/*/Cargo.toml"
+      - "crates/*/fuzz/**"
+      - "crates/*/src/**"
+      - ".github/workflows/fuzz-crates.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/*/Cargo.toml"
+      - "crates/*/fuzz/**"
+      - "crates/*/src/**"
+      - ".github/workflows/fuzz-crates.yml"
+  # Weekly backstop: path-filtered triggers cannot see every way the fuzz
+  # build can break (toolchain drift, upstream releases).
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  FUZZ_DURATION: 60
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate:
+          - aerie-falcon-native
+          - aerie-falcon
+    name: Fuzz ${{ matrix.crate }}
+    concurrency:
+      group: fuzz-crates-${{ github.head_ref || github.ref }}-${{ matrix.crate }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          # Dated pin: bare `nightly` fails unrelated PRs on any nightly
+          # regression and is irreproducible later. Bump deliberately.
+          toolchain: nightly-2026-06-04
+      - name: Install cargo-fuzz
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: cargo-fuzz
+      - name: Fuzz all targets
+        working-directory: crates/${{ matrix.crate }}
+        run: |
+          set -euo pipefail
+          targets=$(cargo +nightly-2026-06-04 fuzz list)
+          if [ -z "$targets" ]; then
+            echo "No fuzz targets found for ${{ matrix.crate }}"
+            exit 1
+          fi
+          for target in $targets; do
+            echo "--- Fuzzing $target for ${FUZZ_DURATION}s ---"
+            # Committed seeds/<target> holds valid encodings; the byte
+            # layers gate on exact lengths, so unseeded runs never get
+            # past the length checks.
+            # Explicit gnu target: the runner otherwise resolves to musl,
+            # which is incompatible with the address sanitizer.
+            mkdir -p "fuzz/corpus/$target"
+            if [ -d "fuzz/seeds/$target" ]; then
+              cargo +nightly-2026-06-04 fuzz run --target x86_64-unknown-linux-gnu "$target" "fuzz/corpus/$target" "fuzz/seeds/$target" -- -max_len=131072 -max_total_time=$FUZZ_DURATION
+            else
+              cargo +nightly-2026-06-04 fuzz run --target x86_64-unknown-linux-gnu "$target" -- -max_len=131072 -max_total_time=$FUZZ_DURATION
+            fi
+          done

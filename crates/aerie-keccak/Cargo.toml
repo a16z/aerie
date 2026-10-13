@@ -1,0 +1,24 @@
+[package]
+name = "aerie-keccak"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Stable runtime-dispatched parallel Keccak-f1600 for Aerie"
+
+[dependencies]
+hybrid-array = { workspace = true }
+keccak = { workspace = true }
+
+[dev-dependencies]
+sha3-legacy = { workspace = true }
+shake = { workspace = true }
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
+pedantic = { level = "warn", priority = -1 }
+missing_panics_doc = "allow"
+similar_names = "allow"
+
+[lints.rust]
+unsafe_code = "deny"

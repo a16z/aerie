@@ -1,0 +1,55 @@
+# cargo-deny policy (CI workflow "Security"). Advisories, licenses, duplicate
+# versions and dependency sources are checked on every pull request and weekly.
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+# Unmaintained notices fail only for direct workspace dependencies; the
+# pinned Akita tree carries `paste` (through spongefish and Plonky3's
+# `p3-field`), which we cannot replace from here.
+unmaintained = "workspace"
+# Add RUSTSEC ids here with a comment naming the reason and the owner.
+ignore = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "Unicode-3.0",
+  "Zlib",
+  "CC0-1.0",
+  # fn-dsa (the reference Falcon signer used for honest vectors).
+  "Unlicense",
+]
+
+[bans]
+# The pinned Akita tree drags in several duplicate versions;
+# warn so the report stays visible without blocking merges on upstream churn.
+multiple-versions = "warn"
+# Every path and workspace-inherited git dependency is version-less, which
+# cargo-deny classifies as a wildcard; the lockfile pins them exactly.
+wildcards = "allow"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Every git dependency must be one of the pinned trees below; a new git
+# source is a policy change, not a routine dependency bump.
+allow-git = [
+  # Upstream Akita and the jolt-field revision pinned with it.
+  "https://github.com/LayerZero-Labs/akita.git",
+  "https://github.com/a16z/jolt",
+  # spongefish, a git dependency of akita-transcript and of aerie-falcon's
+  # vendored PIOP transcript.
+  "https://github.com/arkworks-rs/spongefish",
+]

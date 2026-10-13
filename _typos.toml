@@ -1,0 +1,13 @@
+# Spelling allowlist for `typos` (CI job "Typos"). Every entry is a term of
+# art or a name that the default dictionary misreads as an English typo.
+[default.extend-words]
+# Module-SIS, the lattice assumption behind the Akita commitments.
+msis = "msis"
+# "Thm" abbreviates theorem throughout the specs.
+thm = "thm"
+# Bootle, a co-author of the Orthus paper cited in README.md.
+bootle = "bootle"
+# Mermaid node label in specs/falcon.md.
+ba = "ba"
+# Aerie key schedule artifact extension.
+aks = "aks"

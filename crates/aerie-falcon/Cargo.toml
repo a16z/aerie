@@ -1,0 +1,83 @@
+[package]
+name = "aerie-falcon"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Aerie Falcon signature aggregation protocol"
+
+[features]
+default = ["parallel"]
+adversarial-internals = []
+bench-internals = []
+honest-vectors = ["aerie-falcon-statement/honest-vectors"]
+parallel = [
+  "dep:rayon",
+  "akita-pcs/parallel",
+  "aerie-falcon-statement/parallel",
+  "jolt-field/parallel",
+]
+
+[dependencies]
+aerie-keccak = { workspace = true }
+aerie-simd = { workspace = true }
+akita-algebra = { workspace = true }
+akita-config = { workspace = true }
+akita-error = { workspace = true }
+jolt-field = { workspace = true }
+jolt-poly = { workspace = true }
+akita-params = { workspace = true }
+akita-pcs = { workspace = true }
+akita-serialization = { workspace = true }
+akita-sumcheck = { workspace = true }
+akita-transcript = { workspace = true }
+akita-types = { workspace = true }
+aerie-falcon-native = { workspace = true }
+aerie-pcs-config = { path = "../aerie-pcs-config" }
+rayon = { workspace = true, optional = true }
+aerie-falcon-statement = { path = "../aerie-falcon-statement" }
+tracing = { workspace = true }
+shake = { workspace = true }
+spongefish = { workspace = true }
+
+[dev-dependencies]
+# Test builds honor AERIE_SIMD_BACKEND so CI can pin each kernel variant.
+aerie-simd = { workspace = true, features = ["backend-override"] }
+aerie-falcon-statement = { path = "../aerie-falcon-statement", features = [
+  "honest-vectors",
+] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+type_complexity = "allow"
+items_after_statements = "allow"
+
+[package.metadata.cargo-machete]
+# tracing is consumed by the aerie_falcon_statement::staged! macro expansion.
+ignored = ["tracing"]
+
+[[bench]]
+name = "ring-functional"
+harness = false
+required-features = ["bench-internals"]
+
+[[bench]]
+name = "projection"
+harness = false
+required-features = ["bench-internals"]
+
+[[test]]
+name = "adversarial"
+required-features = ["adversarial-internals"]

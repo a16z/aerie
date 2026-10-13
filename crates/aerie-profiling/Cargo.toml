@@ -1,0 +1,25 @@
+[package]
+name = "aerie-profiling"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Profiling infrastructure: Perfetto-loadable traces, metrics monitor, counter rewrite (specs/techniques/profiling.md)"
+
+[dependencies]
+serde_json = { workspace = true }
+sysinfo = { workspace = true }
+tracing = { workspace = true }
+tracing-chrome = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+too_many_lines = "allow"

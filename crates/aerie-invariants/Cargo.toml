@@ -1,0 +1,47 @@
+[package]
+name = "aerie-invariants"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Machine-checkable security invariants for Aerie Falcon aggregation"
+publish = false
+
+[features]
+default = ["parallel"]
+parallel = [
+  "aerie-falcon/parallel",
+  "aerie-falcon-native/parallel",
+  "aerie-falcon-statement/parallel",
+  "jolt-field/parallel",
+]
+
+[dependencies]
+aerie-falcon = { path = "../aerie-falcon", default-features = false, features = [
+  "adversarial-internals",
+  "honest-vectors",
+] }
+aerie-falcon-statement = { path = "../aerie-falcon-statement", default-features = false, features = [
+  "honest-vectors",
+] }
+aerie-falcon-native = { workspace = true }
+jolt-field = { workspace = true }
+libc = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+module_name_repetitions = "allow"
+doc_markdown = "allow"

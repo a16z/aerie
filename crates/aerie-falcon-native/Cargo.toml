@@ -1,0 +1,39 @@
+[package]
+name = "aerie-falcon-native"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Falcon-512 and Falcon-1024 decoding, records, and native verification for Aerie"
+
+[features]
+parallel = ["dep:rayon"]
+
+[dependencies]
+aerie-keccak = { workspace = true }
+hybrid-array = { workspace = true }
+rayon = { workspace = true, optional = true }
+shake = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+fn-dsa = { workspace = true }
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[[bench]]
+name = "hash-to-point"
+path = "benches/hash_to_point.rs"
+harness = false
+required-features = ["parallel"]

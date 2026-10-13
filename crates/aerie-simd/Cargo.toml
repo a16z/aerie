@@ -1,0 +1,26 @@
+[package]
+name = "aerie-simd"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Runtime-selected exact SIMD kernels for the Aerie Falcon protocol"
+
+[features]
+# Honor AERIE_SIMD_BACKEND so tests can pin each kernel variant. Only
+# aerie-falcon's dev-dependency enables it, so it reaches a build only when
+# that invocation compiles aerie-falcon's test or bench targets; it can only
+# lower the ceiling below what the CPU supports.
+backend-override = []
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
+pedantic = { level = "warn", priority = -1 }
+missing_panics_doc = "allow"
+
+[[bench]]
+name = "small-signed-dot"
+harness = false

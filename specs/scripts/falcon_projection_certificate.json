@@ -1,0 +1,718 @@
+{
+  "schema": "aerie/falcon/projection-certificate/v3",
+  "provenance": {
+    "norm_leg": "elementary: Lemmas A, B, C, C', D and the assembly of specs/falcon-projection-theorem.md Section 3; sup_w h_t(w) certified here in exact arithmetic"
+  },
+  "constants": {
+    "p": 18446744073709551557,
+    "q": 12289,
+    "records": 65536,
+    "eps_bits": 136,
+    "honest_cap_bits": 129,
+    "honest_floor_bits": "1289/10",
+    "s2_max": 2047,
+    "A": "1/1024",
+    "R": "33/32",
+    "mass_bits": 192,
+    "norm_widths": [
+      43,
+      43,
+      43,
+      43
+    ],
+    "norm_groups": 4,
+    "norm_outputs": 156,
+    "cap_max_order": 200,
+    "wrap_max_order": 300,
+    "dyadic_bits": 320,
+    "wallis_shift": 2048,
+    "cell_bits": 40
+  },
+  "laplace": {
+    "t": "3",
+    "K": "21/40",
+    "sup_bound": "262447/500000",
+    "sup_bound_display": 0.524894,
+    "K_minus_sup_bound": "53/500000",
+    "K_minus_sup_bound_display": 0.000106,
+    "h_at_w1_lower_display": 0.5248935341839319,
+    "h_at_w1_upper_display": 0.5248935341839319,
+    "h_at_w1_upper": {
+      "sha256": "48635ecea2ac14bc1c1e4cad8d7a9b96921da9cd2f5667db15e30ef101c9240c",
+      "numerator_bits": 320,
+      "denominator_bits": 321
+    },
+    "gaussian_limit_upper": "1/2",
+    "small_w_q0": 4,
+    "small_w_upper": {
+      "sha256": "fe5eae3ae75a215b32d9cfe036b10f969a77fd75d06fc61b83bd7bb8d0fdf7c3",
+      "numerator_bits": 319,
+      "denominator_bits": 320
+    },
+    "small_w_upper_display": 0.5115894877738146,
+    "cells": 40,
+    "cells_sha256": "093febe286b4c9594af1001ba02327c9c04850d527d7b5346eabb016afc230fe",
+    "max_cell_bound": {
+      "sha256": "ee0cce1f6abc5a6839f0d94fad8a127d517f70bb74ae5230721999c1a4a30426",
+      "numerator_bits": 675,
+      "denominator_bits": 677
+    },
+    "max_cell_bound_display": 0.5248939999999976,
+    "escape_eps_F": "2722258935367043480192264877035430608895/5986310706507378352962293074805895248510699696029696",
+    "escape_eps_F_log2": -41.000000000000256
+  },
+  "global_checks": {
+    "packed convolution matches schoolbook": true,
+    "exp_grid_upper(j) >= exp_upper(t A R^j) at j in {0,100,250}": true,
+    "pi enclosure lies inside (333/106, 355/113)": true,
+    "exp(3) enclosure is consistent with independent Taylor bounds and narrower than 2^-150": true,
+    "e^3 > 20 (so (1 + e^-3)/2 < 21/40 at p = 1)": true,
+    "Lemma C: sup_(0<w<=1) h_t(w) <= U = 262447/500000 <= K = 21/40 at t = 3": true,
+    "q = 12289 is prime": true,
+    "centered h, t bound (q-1)/2 = 6144": true,
+    "3^(p-1) <= (2p-1)!! for p <= 300": true,
+    "Lemma A terminal escape 2^-156 fits 2^-136": true,
+    "n=512: cmax = isqrt(B) = 5833": true,
+    "n=512: L_W equals the existing spec value 811,061,395": true,
+    "n=1024: cmax = isqrt(B) = 8382": true,
+    "n=1024: L_W equals the existing spec value 1,648,068,606": true
+  },
+  "configurations": [
+    {
+      "role": "rejected",
+      "n": 512,
+      "B": 34034726,
+      "cmax": 5833,
+      "H_S": 2230499803136,
+      "H_S_log2": 41.02050415942752,
+      "C_S": 5092300183991442303232,
+      "C_S_log2": 72.10880745924054,
+      "cap_order": 46,
+      "cap_moment": {
+        "sha256": "e78231ad76fa69521a688c60cc9fbfcb32e808e006e5006fcad237e42411a88d",
+        "numerator_bits": 1351,
+        "denominator_bits": 50
+      },
+      "rho": "(1/1024)^5*(33/32)^1470",
+      "rho_grid_exponent": 1470,
+      "rho_log2": 15.259355456926642,
+      "eta_proj": 32768,
+      "Q_S": "5092300183991442303233/32768",
+      "Q_S_log2": 57.10880745924054,
+      "lift_slack_bits": 6.891192540591675,
+      "exactness": {
+        "m": 71360354427,
+        "tau": [
+          4567062683360,
+          2283531341680,
+          1141765670840,
+          570882835420,
+          285441417710,
+          142720708855
+        ],
+        "tau_log2": [
+          42.05440372962409,
+          41.05440372962409,
+          40.05440372962409,
+          39.05440372962409,
+          38.05440372962409,
+          37.05440372962409
+        ],
+        "fan_in": [
+          4096,
+          688,
+          688,
+          688,
+          688
+        ],
+        "margin_bits": [
+          8.945596270376228,
+          12.519331515674445,
+          13.519331515675077,
+          14.519331515676342,
+          15.519331515678864
+        ]
+      },
+      "norm_grid_err": {
+        "sha256": "4514a0183260f9f67f647b8da1860e2257a08e5c0e681c09096dd3fc761fe38b",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_grid_err_bits": 136.44162393304896,
+      "norm_escape": "1/91343852333181432387730302044767688728495783936",
+      "norm_err": {
+        "sha256": "cd930e7d0483d8b16d59fab8481ee7590ab6002b3f07d3b1ac9683712abf5dfb",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_err_bits": 136.44162206444844,
+      "L_W": 811061395,
+      "H_W": 22072796136550246960332800,
+      "H_W_log2": 84.19047177102752,
+      "residual": {
+        "b": 17,
+        "widths": [
+          28,
+          28,
+          28
+        ],
+        "kill": "3/17135833820132164693504609167575836181640625",
+        "kill_bits": 142.0349619737379,
+        "wrap": {
+          "sha256": "20a4d9c709ecbc64471f4e7f5852a584793fa6f87c20dedd492bed8d5a9a841e",
+          "numerator_bits": 7892,
+          "denominator_bits": 8064
+        },
+        "wrap_bits": 172.57268876249054,
+        "wrap_order": 63
+      },
+      "total_err": {
+        "sha256": "7bcd14d8da829724d0bc385e7dcaa301592c32eef4fcd188363607dbf9fee108",
+        "numerator_bits": 11336,
+        "denominator_bits": 11472
+      },
+      "total_err_bits": 136.4120452032039,
+      "honest": {
+        "sha256": "4131d891d788b445c4a6d6c0965310af1092dc0759599d4bff8d76de5940db65",
+        "numerator_bits": 8065,
+        "denominator_bits": 8193
+      },
+      "honest_bits": 129.0,
+      "checks": {
+        "eta_proj_at_most_grid_threshold": true,
+        "lift": true,
+        "accept_below_tau5": true,
+        "lemma_a_stage_0": true,
+        "lemma_a_stage_1": true,
+        "lemma_a_stage_2": true,
+        "lemma_a_stage_3": true,
+        "lemma_a_stage_4": true,
+        "lemma_b_stage_0": true,
+        "lemma_b_stage_1": true,
+        "lemma_b_stage_2": true,
+        "lemma_b_stage_3": true,
+        "lemma_b_stage_4": true,
+        "spec_radices_match_geometry": true,
+        "two_b_below_q": true,
+        "total_at_least_136_bits": true,
+        "honest_at_least_128_9_bits": true
+      },
+      "certified": true,
+      "outputs": 184,
+      "clear_bytes": 1472,
+      "norm_geometry": {
+        "radix_exponents": [
+          12,
+          4,
+          4,
+          4,
+          2
+        ],
+        "radices": [
+          4096,
+          16,
+          16,
+          16,
+          4
+        ],
+        "coefficients": 1166848,
+        "ext": 12351,
+        "prefix_entries": 3005872
+      },
+      "residual_geometry": {
+        "radix_exponents": [
+          11,
+          7,
+          7
+        ],
+        "radices": [
+          2048,
+          128,
+          128
+        ],
+        "coefficients": 258048,
+        "ext": 3869,
+        "prefix_entries": 462336
+      },
+      "total_coefficients": 1424896,
+      "merged_ext": 14357
+    },
+    {
+      "role": "chosen",
+      "n": 512,
+      "B": 34034726,
+      "cmax": 5833,
+      "H_S": 2230499803136,
+      "H_S_log2": 41.02050415942752,
+      "C_S": 5092300183991442303232,
+      "C_S_log2": 72.10880745924054,
+      "cap_order": 46,
+      "cap_moment": {
+        "sha256": "e78231ad76fa69521a688c60cc9fbfcb32e808e006e5006fcad237e42411a88d",
+        "numerator_bits": 1351,
+        "denominator_bits": 50
+      },
+      "rho": "(1/1024)^5*(33/32)^1470",
+      "rho_grid_exponent": 1470,
+      "rho_log2": 15.259355456926642,
+      "eta_proj": 32768,
+      "Q_S": "5092300183991442303233/32768",
+      "Q_S_log2": 57.10880745924054,
+      "lift_slack_bits": 6.891192540591675,
+      "exactness": {
+        "m": 71360354427,
+        "tau": [
+          4567062683360,
+          2283531341680,
+          1141765670840,
+          570882835420,
+          285441417710,
+          142720708855
+        ],
+        "tau_log2": [
+          42.05440372962409,
+          41.05440372962409,
+          40.05440372962409,
+          39.05440372962409,
+          38.05440372962409,
+          37.05440372962409
+        ],
+        "fan_in": [
+          4096,
+          688,
+          688,
+          688,
+          688
+        ],
+        "margin_bits": [
+          8.945596270376228,
+          12.519331515674445,
+          13.519331515675077,
+          14.519331515676342,
+          15.519331515678864
+        ]
+      },
+      "norm_grid_err": {
+        "sha256": "4514a0183260f9f67f647b8da1860e2257a08e5c0e681c09096dd3fc761fe38b",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_grid_err_bits": 136.44162393304896,
+      "norm_escape": "1/91343852333181432387730302044767688728495783936",
+      "norm_err": {
+        "sha256": "cd930e7d0483d8b16d59fab8481ee7590ab6002b3f07d3b1ac9683712abf5dfb",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_err_bits": 136.44162206444844,
+      "L_W": 811061395,
+      "H_W": 22072796136550246960332800,
+      "H_W_log2": 84.19047177102752,
+      "residual": {
+        "b": 12,
+        "widths": [
+          31,
+          31,
+          31
+        ],
+        "kill": "3/21684043449710088680149056017398834228515625",
+        "kill_bits": 142.3745793822953,
+        "wrap": {
+          "sha256": "9b8fc469d36d97ab7a3e74f56b997c3a466fd9f5ec1ef3ac212e87eb0b57eaf6",
+          "numerator_bits": 16971,
+          "denominator_bits": 17408
+        },
+        "wrap_bits": 437.73791564432395,
+        "wrap_order": 136
+      },
+      "total_err": {
+        "sha256": "8af4d16345e79a3661bf2a262658e42b91c137d359d06c4e3e0a717a401fec03",
+        "numerator_bits": 20680,
+        "denominator_bits": 20816
+      },
+      "total_err_bits": 136.41819887066958,
+      "honest": {
+        "sha256": "98284bc41a06554671d0e28e0b35825c31c6226f306c1c2e2368e560cc706711",
+        "numerator_bits": 17408,
+        "denominator_bits": 17537
+      },
+      "honest_bits": 129.0,
+      "checks": {
+        "eta_proj_at_most_grid_threshold": true,
+        "lift": true,
+        "accept_below_tau5": true,
+        "lemma_a_stage_0": true,
+        "lemma_a_stage_1": true,
+        "lemma_a_stage_2": true,
+        "lemma_a_stage_3": true,
+        "lemma_a_stage_4": true,
+        "lemma_b_stage_0": true,
+        "lemma_b_stage_1": true,
+        "lemma_b_stage_2": true,
+        "lemma_b_stage_3": true,
+        "lemma_b_stage_4": true,
+        "spec_radices_match_geometry": true,
+        "two_b_below_q": true,
+        "total_at_least_136_bits": true,
+        "honest_at_least_128_9_bits": true
+      },
+      "certified": true,
+      "outputs": 187,
+      "clear_bytes": 1496,
+      "norm_geometry": {
+        "radix_exponents": [
+          12,
+          4,
+          4,
+          4,
+          2
+        ],
+        "radices": [
+          4096,
+          16,
+          16,
+          16,
+          4
+        ],
+        "coefficients": 1166848,
+        "ext": 12351,
+        "prefix_entries": 3005872
+      },
+      "residual_geometry": {
+        "radix_exponents": [
+          11,
+          7,
+          7
+        ],
+        "radices": [
+          2048,
+          128,
+          128
+        ],
+        "coefficients": 309504,
+        "ext": 4223,
+        "prefix_entries": 511872
+      },
+      "total_coefficients": 1476352,
+      "merged_ext": 14714
+    },
+    {
+      "role": "chosen",
+      "n": 1024,
+      "B": 70265242,
+      "cmax": 8382,
+      "H_S": 4604902899712,
+      "H_S_log2": 42.06630787420906,
+      "C_S": 10513136047130310946696,
+      "C_S_log2": 73.15461117402208,
+      "cap_order": 46,
+      "cap_moment": {
+        "sha256": "e78231ad76fa69521a688c60cc9fbfcb32e808e006e5006fcad237e42411a88d",
+        "numerator_bits": 1351,
+        "denominator_bits": 50
+      },
+      "rho": "(1/1024)^5*(33/32)^1470",
+      "rho_grid_exponent": 1470,
+      "rho_log2": 15.259355456926642,
+      "eta_proj": 32768,
+      "Q_S": "10513136047130310946697/32768",
+      "Q_S_log2": 58.15461117402208,
+      "lift_slack_bits": 5.845388825642345,
+      "exactness": {
+        "m": 102533584971,
+        "tau": [
+          6562149438176,
+          3281074719088,
+          1640537359544,
+          820268679772,
+          410134339886,
+          205067169943
+        ],
+        "tau_log2": [
+          42.5773055870095,
+          41.5773055870095,
+          40.5773055870095,
+          39.5773055870095,
+          38.5773055870095,
+          37.5773055870095
+        ],
+        "fan_in": [
+          4096,
+          688,
+          688,
+          688,
+          1376
+        ],
+        "margin_bits": [
+          8.422694412990722,
+          11.996429658288847,
+          12.996429658289287,
+          13.996429658290168,
+          13.996429658291923
+        ]
+      },
+      "norm_grid_err": {
+        "sha256": "4514a0183260f9f67f647b8da1860e2257a08e5c0e681c09096dd3fc761fe38b",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_grid_err_bits": 136.44162393304896,
+      "norm_escape": "1/91343852333181432387730302044767688728495783936",
+      "norm_err": {
+        "sha256": "cd930e7d0483d8b16d59fab8481ee7590ab6002b3f07d3b1ac9683712abf5dfb",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_err_bits": 136.44162206444844,
+      "L_W": 1648068606,
+      "H_W": 182276407506027808926203904,
+      "H_W_log2": 87.2362583088835,
+      "residual": {
+        "b": 12,
+        "widths": [
+          31,
+          31,
+          31
+        ],
+        "kill": "3/21684043449710088680149056017398834228515625",
+        "kill_bits": 142.3745793822953,
+        "wrap": {
+          "sha256": "25bf121e1768bb289d7af253d939d625b835582f3b1bc8125a70b4f99c3676d9",
+          "numerator_bits": 7527,
+          "denominator_bits": 7680
+        },
+        "wrap_bits": 153.74671612310976,
+        "wrap_order": 60
+      },
+      "total_err": {
+        "sha256": "2c920898717aa85ecb0a369e1f513d4358c04794e45b4c37757b4bec81b46907",
+        "numerator_bits": 10952,
+        "denominator_bits": 11088
+      },
+      "total_err_bits": 136.41819010530708,
+      "honest": {
+        "sha256": "2aad15d95887db991f6d1ebfa4101ac65d062879f54f9aab99bbdd14b4b3949a",
+        "numerator_bits": 7681,
+        "denominator_bits": 7809
+      },
+      "honest_bits": 128.9999999487527,
+      "checks": {
+        "eta_proj_at_most_grid_threshold": true,
+        "lift": true,
+        "accept_below_tau5": true,
+        "lemma_a_stage_0": true,
+        "lemma_a_stage_1": true,
+        "lemma_a_stage_2": true,
+        "lemma_a_stage_3": true,
+        "lemma_a_stage_4": true,
+        "lemma_b_stage_0": true,
+        "lemma_b_stage_1": true,
+        "lemma_b_stage_2": true,
+        "lemma_b_stage_3": true,
+        "lemma_b_stage_4": true,
+        "spec_radices_match_geometry": true,
+        "two_b_below_q": true,
+        "total_at_least_136_bits": true,
+        "honest_at_least_128_9_bits": true
+      },
+      "certified": true,
+      "outputs": 187,
+      "clear_bytes": 1496,
+      "norm_geometry": {
+        "radix_exponents": [
+          12,
+          4,
+          4,
+          4,
+          3
+        ],
+        "radices": [
+          4096,
+          16,
+          16,
+          16,
+          8
+        ],
+        "coefficients": 1274176,
+        "ext": 13039,
+        "prefix_entries": 6011744
+      },
+      "residual_geometry": {
+        "radix_exponents": [
+          11,
+          7,
+          8
+        ],
+        "radices": [
+          2048,
+          128,
+          256
+        ],
+        "coefficients": 432512,
+        "ext": 4351,
+        "prefix_entries": 1023744
+      },
+      "total_coefficients": 1706688,
+      "merged_ext": 15530
+    },
+    {
+      "role": "rejected",
+      "n": 1024,
+      "B": 70265242,
+      "cmax": 8382,
+      "H_S": 4604902899712,
+      "H_S_log2": 42.06630787420906,
+      "C_S": 10513136047130310946696,
+      "C_S_log2": 73.15461117402208,
+      "cap_order": 46,
+      "cap_moment": {
+        "sha256": "e78231ad76fa69521a688c60cc9fbfcb32e808e006e5006fcad237e42411a88d",
+        "numerator_bits": 1351,
+        "denominator_bits": 50
+      },
+      "rho": "(1/1024)^5*(33/32)^1470",
+      "rho_grid_exponent": 1470,
+      "rho_log2": 15.259355456926642,
+      "eta_proj": 32768,
+      "Q_S": "10513136047130310946697/32768",
+      "Q_S_log2": 58.15461117402208,
+      "lift_slack_bits": 5.845388825642345,
+      "exactness": {
+        "m": 102533584971,
+        "tau": [
+          6562149438176,
+          3281074719088,
+          1640537359544,
+          820268679772,
+          410134339886,
+          205067169943
+        ],
+        "tau_log2": [
+          42.5773055870095,
+          41.5773055870095,
+          40.5773055870095,
+          39.5773055870095,
+          38.5773055870095,
+          37.5773055870095
+        ],
+        "fan_in": [
+          4096,
+          688,
+          688,
+          688,
+          1376
+        ],
+        "margin_bits": [
+          8.422694412990722,
+          11.996429658288847,
+          12.996429658289287,
+          13.996429658290168,
+          13.996429658291923
+        ]
+      },
+      "norm_grid_err": {
+        "sha256": "4514a0183260f9f67f647b8da1860e2257a08e5c0e681c09096dd3fc761fe38b",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_grid_err_bits": 136.44162393304896,
+      "norm_escape": "1/91343852333181432387730302044767688728495783936",
+      "norm_err": {
+        "sha256": "cd930e7d0483d8b16d59fab8481ee7590ab6002b3f07d3b1ac9683712abf5dfb",
+        "numerator_bits": 3128,
+        "denominator_bits": 3265
+      },
+      "norm_err_bits": 136.44162206444844,
+      "L_W": 1648068606,
+      "H_W": 182276407506027808926203904,
+      "H_W_log2": 87.2362583088835,
+      "residual": {
+        "b": 17,
+        "widths": [
+          28,
+          28,
+          28
+        ],
+        "kill": "3/17135833820132164693504609167575836181640625",
+        "kill_bits": 142.0349619737379,
+        "wrap": {
+          "sha256": "093b1252a89f1ccafafad76d80b44999dffb3ba3fd9fbcf4d4f93416e8fc77f3",
+          "numerator_bits": 3155,
+          "denominator_bits": 3200
+        },
+        "wrap_bits": 45.61419795541315,
+        "wrap_order": 25
+      },
+      "total_err": {
+        "sha256": "444473a4ac248fe27ffb2a6decd0140b09a29abd1e5c62a105f5d31e5f985cdf",
+        "numerator_bits": 6563,
+        "denominator_bits": 6608
+      },
+      "total_err_bits": 45.61419795541315,
+      "honest": {
+        "sha256": "b689d8dcd2b7b9b9faec0bdea2923ca4751de8a00f7992a92705843a203a4189",
+        "numerator_bits": 3284,
+        "denominator_bits": 3329
+      },
+      "honest_bits": 45.61419795541315,
+      "checks": {
+        "eta_proj_at_most_grid_threshold": true,
+        "lift": true,
+        "accept_below_tau5": true,
+        "lemma_a_stage_0": true,
+        "lemma_a_stage_1": true,
+        "lemma_a_stage_2": true,
+        "lemma_a_stage_3": true,
+        "lemma_a_stage_4": true,
+        "lemma_b_stage_0": true,
+        "lemma_b_stage_1": true,
+        "lemma_b_stage_2": true,
+        "lemma_b_stage_3": true,
+        "lemma_b_stage_4": true,
+        "spec_radices_match_geometry": true,
+        "two_b_below_q": true,
+        "total_at_least_136_bits": false,
+        "honest_at_least_128_9_bits": false
+      },
+      "certified": false,
+      "outputs": 184,
+      "clear_bytes": 1472,
+      "norm_geometry": {
+        "radix_exponents": [
+          12,
+          4,
+          4,
+          4,
+          3
+        ],
+        "radices": [
+          4096,
+          16,
+          16,
+          16,
+          8
+        ],
+        "coefficients": 1274176,
+        "ext": 13039,
+        "prefix_entries": 6011744
+      },
+      "residual_geometry": {
+        "radix_exponents": [
+          11,
+          7,
+          8
+        ],
+        "radices": [
+          2048,
+          128,
+          256
+        ],
+        "coefficients": 358400,
+        "ext": 3997,
+        "prefix_entries": 924672
+      },
+      "total_coefficients": 1632576,
+      "merged_ext": 15173
+    }
+  ]
+}

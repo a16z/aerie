@@ -1,0 +1,53 @@
+[package]
+name = "aerie"
+version.workspace = true
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+description = "Public API and benchmark harness for Aerie signature aggregation"
+
+[features]
+default = ["parallel"]
+falcon-bench = ["parallel", "honest-vectors", "bench-internals"]
+bench-internals = ["aerie-falcon/bench-internals"]
+parallel = ["aerie-falcon/parallel", "aerie-falcon-statement/parallel"]
+honest-vectors = [
+  "aerie-falcon-statement/honest-vectors",
+  "aerie-falcon/honest-vectors",
+]
+# Off by default: retained for the profiling harness integration.
+profiling = ["dep:aerie-profiling"]
+# Off by default: dhat heap profiles for `--heap-profile=prove|verify`.
+heap-profile = ["dep:dhat"]
+
+[dependencies]
+aerie-falcon = { path = "../aerie-falcon", default-features = false }
+aerie-profiling = { workspace = true, optional = true }
+dhat = { version = "0.3.3", optional = true }
+aerie-falcon-native = { workspace = true }
+aerie-falcon-statement = { path = "../aerie-falcon-statement" }
+
+[dev-dependencies]
+# The benchmark builds its own thread pools; the library does not use rayon.
+rayon = { workspace = true }
+tracing = { workspace = true }
+
+[lints.rust]
+# The library forbids unsafe code in `src/lib.rs`; only the benchmark's
+# metering allocator allows it.
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+
+[[bench]]
+name = "falcon"
+path = "benches/falcon.rs"
+harness = false
+required-features = ["falcon-bench"]

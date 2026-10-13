@@ -1,0 +1,341 @@
+name: Build and Test Aerie
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+    paths-ignore:
+      - "specs/**"
+      - "_docs/**"
+      - "*.md"
+      - ".claude/**"
+
+permissions:
+  contents: read
+
+env:
+  # The committed Cargo.lock resolves the akita stack to the git rev pinned
+  # in Cargo.toml; --locked everywhere keeps CI on exactly that graph. The
+  # toolchain comes from rust-toolchain.toml.
+  RUSTFLAGS: -D warnings
+  CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Check inventory (one stable name each): fmt, taplo, typos, machete, clippy,
+# doc, verifier-portability, Test workspace (gate over the default-feature,
+# no-default-features and ignored-test lanes), keccak-simd. main has no branch protection, so none of these is a required
+# status check. Spec checks, Security, PR title, Catalog drift, Fuzz and the
+# Falcon benchmark live in their own workflows.
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: rustfmt
+          cache: false
+      - name: cargo fmt
+        run: cargo fmt --all --check
+
+  taplo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install taplo
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: taplo-cli
+      - name: taplo fmt --check
+        run: taplo fmt --check
+
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Allowlist in _typos.toml (MSIS, Thm, author names, ...).
+      - uses: crate-ci/typos@00f422f3b19c57bc6338715ebfe3316d38768461 # v1.50.3
+        with:
+          files: .
+
+  machete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # --with-metadata runs `cargo metadata`, which needs the pinned toolchain.
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - name: Install cargo-machete
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: cargo-machete
+      - name: Unused dependencies
+        run: cargo machete --with-metadata
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          components: clippy
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: clippy
+      - name: cargo clippy (workspace, default features)
+        run: cargo clippy --workspace --all-targets --locked
+      - name: cargo clippy (workspace, no default features)
+        run: cargo clippy --workspace --all-targets --locked --no-default-features
+      # Feature lanes the workspace-wide invocations never compile.
+      - name: cargo clippy -p aerie-falcon-statement --features honest-vectors
+        run: cargo clippy -p aerie-falcon-statement --all-targets --locked --features honest-vectors
+      - name: cargo clippy -p aerie --features profiling,falcon-bench
+        run: cargo clippy -p aerie --all-targets --locked --features profiling,falcon-bench
+      # Test-only features of the Falcon protocol crate.
+      - name: cargo clippy -p aerie-falcon (test features)
+        run: >-
+          cargo clippy -p aerie-falcon --all-targets --locked
+          --features adversarial-internals,bench-internals
+
+  doc:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: -D warnings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: clippy
+          save-if: false
+      - name: cargo doc (workspace, no deps)
+        run: cargo doc --workspace --no-deps --locked
+
+  verifier-portability:
+    name: Verifier portability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: verifier-portability
+      # A verifier-only consumer links aerie-falcon without default features.
+      # It must build for the baseline x86-64 ISA, with no SIMD assumptions.
+      - name: Check the verifier graph for baseline x86-64
+        env:
+          RUSTFLAGS: -D warnings -C target-cpu=x86-64
+        run: cargo check --locked -p aerie-falcon --no-default-features
+      - name: Verifier dependency hygiene
+        run: scripts/check_verifier_deps.sh
+
+  test:
+    name: Build and run workspace tests
+    runs-on: ubuntu-latest
+    env:
+      # Two composition tests overflow the default test-thread stack.
+      RUST_MIN_STACK: "536870912"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ci-tests
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: cargo-nextest
+      # Compilation dominates this suite; test partitions previously rebuilt
+      # the complete graph on both runners. Build once and run the whole suite.
+      # aerie-falcon's `adversarial` test declares required-features
+      # adversarial-internals. Request that feature explicitly rather than
+      # relying on aerie-invariants to unify it into the workspace build.
+      - name: Build workspace test binaries
+        run: >-
+          cargo test --workspace --locked --lib --bins --tests
+          --features aerie-falcon/adversarial-internals
+          --profile ci --no-run --timings
+      - name: cargo nextest (workspace, default features)
+        run: |
+          artifact_dir="$RUNNER_TEMP/ci-test-timing"
+          mkdir -p "$artifact_dir"
+          start_epoch=$(date +%s)
+          set +e
+          cargo nextest run --workspace --locked --lib --bins --tests \
+            --features aerie-falcon/adversarial-internals \
+            --profile ci --cargo-profile ci
+          status=$?
+          end_epoch=$(date +%s)
+          printf '{"started_at_epoch":%s,"finished_at_epoch":%s,"exit_code":%s}\n' \
+            "$start_epoch" "$end_epoch" "$status" > "$artifact_dir/timing.json"
+          if [ -f target/nextest/ci/junit.xml ]; then
+            cp target/nextest/ci/junit.xml "$artifact_dir/junit.xml"
+          fi
+          exit "$status"
+      - name: cargo test --doc -p aerie
+        run: cargo test --doc -p aerie --locked
+      - name: Render test timing summary
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/ci-test-timing/junit.xml" ]; then
+            python3 scripts/nextest_timing_summary.py \
+              "$RUNNER_TEMP/ci-test-timing/junit.xml" \
+              --timing "$RUNNER_TEMP/ci-test-timing/timing.json" \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload test timing artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-test-timing
+          path: ${{ runner.temp }}/ci-test-timing
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload compilation timings
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: workspace-compilation-timings
+          path: target/cargo-timings
+          if-no-files-found: warn
+          retention-days: 30
+
+  # The serial (no `parallel`) prover and verifier paths. aerie-invariants
+  # still enables its own features on aerie-falcon and statement, so this lane
+  # covers every crate's no-default-features build that the workspace unifies.
+  test-no-default-features:
+    name: Build and run workspace tests (no default features)
+    runs-on: ubuntu-latest
+    env:
+      RUST_MIN_STACK: "536870912"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ci-tests-no-default-features
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: cargo-nextest
+      - name: cargo nextest (workspace, no default features)
+        run: >-
+          cargo nextest run --workspace --locked --lib --bins --tests
+          --no-default-features --features aerie-falcon/adversarial-internals
+          --profile ci --cargo-profile ci
+
+  # Release-profile tests marked #[ignore] for their size: the PCS roundtrip
+  # at the 2^14 target batch and the Falcon-512/Falcon-1024 large-batch
+  # proof-byte identity gates. Scoped to aerie-falcon's library so offline
+  # catalog regeneration tests elsewhere never run here.
+  test-ignored:
+    name: Run ignored aerie-falcon tests (release)
+    runs-on: ubuntu-latest
+    env:
+      RUST_MIN_STACK: "536870912"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: ci-tests-ignored
+      - name: cargo test -p aerie-falcon --lib -- --ignored
+        run: cargo test --locked -p aerie-falcon --lib --profile ci -- --ignored
+
+  # Keep the existing check name stable.
+  test-workspace:
+    name: Test workspace
+    runs-on: ubuntu-latest
+    needs: [test, test-no-default-features, test-ignored]
+    if: always()
+    steps:
+      - name: Check workspace test results
+        run: |
+          status=0
+          for result in \
+            "test=${{ needs.test.result }}" \
+            "test-no-default-features=${{ needs.test-no-default-features.result }}" \
+            "test-ignored=${{ needs.test-ignored.result }}"; do
+            if [ "${result#*=}" != "success" ]; then
+              echo "Workspace test result: $result"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  keccak-simd:
+    name: Stable Keccak runtime dispatch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: keccak-simd
+      - name: Test stable Keccak backends
+        run: cargo test --release --locked -p aerie-keccak
+      - name: Test every available exact SIMD kernel
+        run: cargo test --release --locked -p aerie-simd
+      # Same binary, two dispatch modes: the scalar platform backend and the
+      # runtime-selected one must agree on every Falcon test.
+      - name: Test Falcon scalar fallback
+        env:
+          AERIE_KECCAK_BACKEND: platform
+        run: cargo test --release --locked -p aerie-falcon-native --all-features
+      - name: Test Falcon with runtime dispatch
+        run: cargo test --release --locked -p aerie-falcon-native --all-features
+      - name: Test Falcon binding across available backends
+        run: |
+          for backend in platform avx2 avx512; do
+            if [ "$backend" = avx2 ] && ! grep -qw avx2 /proc/cpuinfo; then
+              continue
+            fi
+            if [ "$backend" = avx512 ] && ! grep -qw avx512f /proc/cpuinfo; then
+              continue
+            fi
+            AERIE_KECCAK_BACKEND="$backend" cargo test --release --locked \
+              -p aerie-falcon public_records_binding::tests
+            AERIE_KECCAK_BACKEND="$backend" cargo test --release --locked \
+              -p aerie-falcon streamed_target_matches_expanded_across_chunks_and_worker_counts
+          done
+      # aerie-falcon's test build enables aerie-simd/backend-override, so one
+      # binary pins each x86 kernel ceiling in turn; the scalar ceiling is the
+      # oracle for the signed-digit dot and the 14-bit key unpack.
+      - name: Test Falcon verifier kernels across SIMD ceilings
+        run: |
+          for backend in scalar avx2 avx512; do
+            if [ "$backend" = avx2 ] && ! grep -qw avx2 /proc/cpuinfo; then
+              continue
+            fi
+            if [ "$backend" = avx512 ] && ! grep -qw avx512f /proc/cpuinfo; then
+              continue
+            fi
+            if [ "$backend" = avx512 ] && ! grep -qw avx512vbmi /proc/cpuinfo; then
+              echo "::notice::runner lacks avx512vbmi; the avx512 ceiling runs the AVX2 key unpack"
+            fi
+            AERIE_SIMD_BACKEND="$backend" cargo test --release --locked \
+              -p aerie-simd --features backend-override
+            AERIE_SIMD_BACKEND="$backend" cargo test --release --locked \
+              -p aerie-falcon --lib -- small_signed:: ring::functional:: \
+              backward_eq streamed_target transport_proof_roundtrips
+          done
