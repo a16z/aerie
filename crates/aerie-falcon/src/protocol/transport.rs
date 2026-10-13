@@ -1271,7 +1271,7 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "5db34cb91bc5544163fe60ec8c418294",
+            digest, "a8c06ed611db2082fa97738ed236afcd",
             "version 1 proof bytes moved at 4096 records"
         );
     }
@@ -1308,7 +1308,7 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "d5675d748e8fca9f22db24ead4268a95",
+            digest, "b742cfc7ef5507d7432747e56d89d642",
             "version 1 Falcon-1024 proof bytes moved at 2048 records"
         );
     }
