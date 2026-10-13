@@ -79,7 +79,7 @@ spongefish = { git = "https://github.com/arkworks-rs/spongefish", rev = "ef97413
   "sha3",
 ] }
 
-fn-dsa = "=0.3.0"
+fn-dsa = "=0.4.0"
 hybrid-array = "0.4.12"
 keccak = { version = "0.2.0", features = ["parallel"] }
 libc = "0.2"
