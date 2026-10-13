@@ -2,7 +2,7 @@
 """Audit the checked-in Falcon four-group PCS catalog report.
 
 The report is emitted by the aerie-pcs-config regeneration harness from schedules
-planned and validated by Akita 3d69096ea. This script checks report provenance and structure,
+planned and validated by Akita e023b6a46. This script checks report provenance and structure,
 then counts the exact SIS matrix occurrence multiset Akita derives from each
 schedule, including compression and setup-prefix matrices. It does not turn
 Akita's 128-bit estimator gate into a probability or a concrete MSIS advantage.
@@ -18,7 +18,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 REPORT = HERE / "falcon_pcs_catalog_audit.json"
 EXPECTED_SCHEMA = "aerie-pcs-catalog-audit-v1"
-EXPECTED_AKITA = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a"
+EXPECTED_AKITA = "e023b6a46143f7b23199ccecb2684192baf7b640"
 EXPECTED_FAMILIES = (
     "aerie_fp64_signed_width14",
     "aerie_fp64_signed_width4",

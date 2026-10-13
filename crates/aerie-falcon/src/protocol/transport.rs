@@ -1175,7 +1175,7 @@ mod tests {
         // Pins the complete version 1 PCS frame for this fixture; any change
         // to the transcript, codec, or Akita pin moves it.
         assert_eq!(
-            digest, "c3b39271f4938f7dfd7ecffafaf4becc",
+            digest, "043399adab2fa5e5d8f099f72bee5560",
             "version 1 proof bytes moved"
         );
     }
@@ -1231,7 +1231,7 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "3945ca7e7bb866388e65a678965a7055",
+            digest, "02dfeac5304d9e689fc56326e8052c2d",
             "version 1 Falcon-1024 proof bytes moved"
         );
     }

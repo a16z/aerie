@@ -417,7 +417,7 @@ fn output_dir() -> PathBuf {
 const WIDTH14_FAMILY: &str = "aerie_fp64_signed_width14";
 const WIDTH4_FAMILY: &str = "aerie_fp64_signed_width4";
 /// Akita revision whose planner emitted the checked-in catalogs and audit.
-const AUDIT_AKITA_REVISION: &str = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a";
+const AUDIT_AKITA_REVISION: &str = "e023b6a46143f7b23199ccecb2684192baf7b640";
 
 fn width14_spec(output_dir: PathBuf) -> EmitSpec {
     // Reuse complete scalar rows as precommit profiles for every width-14

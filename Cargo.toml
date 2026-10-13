@@ -41,35 +41,35 @@ aerie-falcon-native = { path = "crates/aerie-falcon-native" }
 aerie-profiling = { path = "crates/aerie-profiling" }
 
 # Pin upstream Akita and its exact jolt-field revision together.
-# The revision is on Akita's `dev` branch: the commit that merged Akita
-# `main` into `dev` (LayerZero-Labs/akita#196).
+# The revision is the head of Akita's `dev` branch on 2026-10-10
+# (LayerZero-Labs/akita#228); it includes the ring-switch repricing of #209.
 # Advance them deliberately; a local checkout can still override them
 # through a `[patch]` table in the untracked .cargo/config.toml.
-akita-algebra = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
-akita-challenges = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-algebra = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
+akita-challenges = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
 # `dev-protocol` selects Akita's dev protocol for every Akita crate in the
 # build (Cargo unifies the feature through `akita-params`). The terminal
 # response then omits the last live block of `e` and of `t`; the verifier
 # recomputes each and checks it against a 32-byte digest. The planner prices
 # proofs for that wire format, so the catalogs under
 # `crates/aerie-pcs-config/src/schedules/` are generated with it on.
-akita-config = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false, features = [
+akita-config = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640", default-features = false, features = [
   "dev-protocol",
 ] }
-akita-error = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-error = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
 jolt-field = { git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false, features = [
   "solinas",
 ] }
 jolt-poly = { git = "https://github.com/a16z/jolt", rev = "c7c2d08d5bb0c7c80501f29f723e595af7fcff3c", default-features = false }
-akita-params = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
-akita-pcs = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false }
-akita-planner = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
-akita-serialization = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
-akita-sumcheck = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
-akita-transcript = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a", default-features = false, features = [
+akita-params = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
+akita-pcs = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640", default-features = false }
+akita-planner = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
+akita-serialization = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
+akita-sumcheck = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
+akita-transcript = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640", default-features = false, features = [
   "transcript-blake2b",
 ] }
-akita-types = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "3d69096eadb129c097e4fc2e4f2d289e82e0ea1a" }
+akita-types = { git = "https://github.com/LayerZero-Labs/akita.git", rev = "e023b6a46143f7b23199ccecb2684192baf7b640" }
 # The Spongefish revision Akita pins. Aerie uses its native Spongefish API
 # directly for the framed PIOP stream with the Blake2b backend. Spongefish at
 # this revision imports its `StdHash` from the `sha3` feature even when only

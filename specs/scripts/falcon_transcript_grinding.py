@@ -2,7 +2,7 @@
 """Check indexed-coordinate field grinding and nonce sizes against the catalog.
 
 The selected schedule geometry comes from the checked-in native Akita catalog
-audit (SHA-256 aeaed1ece31542e7932521f2ba5068cde61356a21efd939035335bb4cd812ce4).
+audit (SHA-256 2bb3b0c78a3d69daab47ed5fd2d8e34d4aff831ff280b44928e79f480a1ed8de).
 PCS field-event enumeration and tree debits are compared with the Aerie
 paper's whole-protocol tree evidence, computed independently from a frozen
 catalog input (SHA-256
@@ -53,7 +53,7 @@ D128_RAW_SUPPORT = comb(128, 31) * 2**31
 D128_ACCEPTED_SUPPORT = 502822610611069237129947393810277364817
 D128_NORM_THRESHOLD = 13
 D128_COLLISION_FACTOR = 64
-NATIVE_CATALOG_AUDIT_SHA256 = "aeaed1ece31542e7932521f2ba5068cde61356a21efd939035335bb4cd812ce4"
+NATIVE_CATALOG_AUDIT_SHA256 = "2bb3b0c78a3d69daab47ed5fd2d8e34d4aff831ff280b44928e79f480a1ed8de"
 THETA = Fraction(1, 2**135)
 assert D64_SUPPORT == 361715808335458406596740595030299770880
 assert D128_RAW_SUPPORT == 1046949673839956231392050469602223718400
@@ -399,9 +399,10 @@ def expand_pcs(profile: dict) -> tuple[list[dict], list[dict]]:
             else:
                 field_event(field, level, "EvaluationBatch", max(1, layout_polys - 1), layout_polys)
 
-        alpha_loss = max((2 * (g["subring_dimension"]
-                               if g["opening_method"] == "SubringCoefficientPacking"
-                               else g["inner_ring_dimension"]) - 1) for g in groups)
+        # Akita prices the ring-switch challenge by the native inner ring for
+        # both opening methods: the quotient-lift residual of the
+        # inner-consistency rows has degree below 2 * d_max.
+        alpha_loss = max(2 * g["inner_ring_dimension"] - 1 for g in groups)
         field_event(field, level, "RingSwitchAlpha", alpha_loss, alpha_loss + 1)
         field_event(field, level, "Tau0Point", rounds, 2**rounds)
         field_event(field, level, "Tau1Point", tau1, 2**tau1)
