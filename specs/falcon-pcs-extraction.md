@@ -74,7 +74,7 @@ support is not the denominator.
 
 For the catalog's $`D=128`$, weight-31 selective $`L_2`$ family, use Akita
 `515a21668`'s `scripts/operator_norm/d128/cert_d128_w31_gamma13.json`, field
-`claimed.p0` (unchanged at the current pin `3d69096ea`). Its exact rational
+`claimed.p0` (unchanged at the current pin `e023b6a46`). Its exact rational
 certifies a contained subset accepted by the strict fixed-point predicate at
 threshold 13. Define
 
@@ -84,6 +84,8 @@ C_{64}&=\binom{64}{41}\binom{41}{31}2^{41}
 =361715808335458406596740595030299770880,\\
 C_{128}&=\binom{128}{31}2^{31}
 =1046949673839956231392050469602223718400,\\
+C_{256}&=\binom{256}{23}2^{23}
+=2873108161471518200301057969538203648000,\\
 A_{128}&=\lceil C_{128}p_0\rceil
 =502822610611069237129947393810277364817.
 \end{aligned}
@@ -94,7 +96,7 @@ $`\log_2 A_{128}\geq128.5633`$. Two single-group rows, width-14 $`(26,1)`$ and
 width-4 $`(25,4)`$, end in a $`D=64`$ selective $`L_2`$ terminal with 31 entries of
 magnitude one and 11 of magnitude two. For it the audit uses
 `scripts/operator_norm/d64/cert_d64_a31_b11_gamma18.json` (threshold 18,
-identical at `515a21668` and `3d69096ea`), giving
+identical at `515a21668` and `e023b6a46`), giving
 $`A_{64}=\lceil\binom{64}{42}\binom{42}{31}2^{42}p_0\rceil
 =355332842887957753779026572075354372186`$, $`\log_2 A_{64}\geq128.0624`$.
 No grouped Falcon production row has a $`D=64`$ $`L_2`$ route. The audit retains the certificate's exact
@@ -106,7 +108,7 @@ the same route-aware denominator. The rational upper bounds are reproduced by
 does not rerun Akita's full certificate-generation and verification pipeline.
 
 **Query convention remains an owner decision.** Under the per-indexed-query
-reading, sparse atom masses are bounded by $`1/C_{64}`$, $`1/C_{128}`$, or
+reading, sparse atom masses are bounded by $`1/C_{64}`$, $`1/C_{128}`$, $`1/C_{256}`$, or
 $`1/A_{128}`$, each below $`2^{-128}`$, so each atom needs zero additional work
 bits. Multiplicity is then charged in the coordinate-fork/query reduction.
 Under the whole-fold reading, the ledger charges the $`\sum_g P_gB_g/L_g`$
@@ -181,9 +183,9 @@ The report records zero unsupported requests. Its full schedules,
 planner estimates, group profiles, and exact SIS occurrence multisets are in
 [`scripts/falcon_pcs_catalog_audit.json`](scripts/falcon_pcs_catalog_audit.json);
 [`scripts/falcon_msis_audit.py`](scripts/falcon_msis_audit.py) validates that
-report against its recorded Akita audit provenance (`3d69096ea`, the current
+report against its recorded Akita audit provenance (`e023b6a46`, the current
 dependency pin) and the production group shapes. The D128 accepted-support
-certificate dates from `515a21668` and is unchanged at `3d69096ea`.
+certificate dates from `515a21668` and is unchanged at `e023b6a46`.
 
 The grouped-opening planner estimates cover the shared four-group schedule.
 The audit retains the payload and setup estimates recorded during catalog

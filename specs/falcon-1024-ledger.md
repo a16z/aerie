@@ -97,20 +97,20 @@ plan are in [`falcon-pcs-extraction.md`](falcon-pcs-extraction.md), Section 4.
 For a fixed fold prefix $`\ell`$, the conditional CWSS upper bound is
 $`\kappa_\ell\leq\sum_g P_gB_g/L_g`$, using each group's polynomial count,
 exact live-block count, and a certified challenge-support lower bound.
-With $`C_{64}`$, $`C_{128}`$, and $`A_{128}=\lceil C_{128}p_0\rceil`$ defined in
+With $`C_{64}`$, $`C_{128}`$, $`C_{256}`$, and $`A_{128}=\lceil C_{128}p_0\rceil`$ defined in
 [`falcon-pcs-extraction.md`](falcon-pcs-extraction.md), Section 2, the
 $`L_\infty`$ routes use raw support and the selective $`L_2`$ routes use
 $`A_{128}=502822610611069237129947393810277364817`$. The latter is derived
 from the exact `claimed.p0` rational in Akita `515a21668`'s D128 certificate,
-unchanged at the current pin `3d69096ea`.
+unchanged at the current pin `e023b6a46`.
 The audit computes rational upper bounds from the serialized schedule.
 Their sums, including the terminal witness term, are:
 
 | $`N_{\rm sig}`$ | Conditional schedule upper bound |
 | ---: | ---: |
 | $`2^{14}`$ | $`266/C_{64}+131/C_{128}+21/A_{128}`$ |
-| $`2^{15}`$ | $`327/C_{64}+34/C_{128}+21/A_{128}`$ |
-| $`2^{16}`$ | $`608/C_{64}+33/C_{128}+21/A_{128}`$ |
+| $`2^{15}`$ | $`200/C_{64}+162/C_{128}+21/A_{128}`$ |
+| $`2^{16}`$ | $`604/C_{64}+41/C_{128}+21/A_{128}`$ |
 
 The deployed convention is indexed-coordinate accounting, the paper's
 Lemma C.3 ("Sparse Folds with an Indexed Query Budget"). Sparse-fold

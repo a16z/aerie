@@ -9,7 +9,7 @@ catalog input (SHA-256
 178b00e63a596d1ba3b3c5d81d6f656fc1346908377107adcf4f43536df761e7) at Akita
 3720078d. The evidence is vendored as a gzip file at
 `specs/evidence/whole-protocol-tree-checks.json.gz`; its SHA-256
-d9ac2d770f03504d5cec7bc40f49c21e627c67db99025b246d65bf03ec0b49a1
+59c2c978af41a677e4b25b89e9eb5a4e968753b8cbaeefe6ffb6aa15442b6ad8
 is checked on the decompressed bytes. `--paper-json` selects another copy.
 A missing or changed file fails.
 The admitted shapes are derived from the padding rule of falcon.md Section 2.1
@@ -42,13 +42,14 @@ END = "<!-- END TRANSCRIPT GRINDING TABLE -->"
 # Default when --paper-json is not given.
 VENDORED_PAPER_JSON = ROOT / "specs" / "evidence" / "whole-protocol-tree-checks.json.gz"
 # SHA-256 of the uncompressed paper evidence.
-PAPER_JSON_SHA256 = "d9ac2d770f03504d5cec7bc40f49c21e627c67db99025b246d65bf03ec0b49a1"
+PAPER_JSON_SHA256 = "59c2c978af41a677e4b25b89e9eb5a4e968753b8cbaeefe6ffb6aa15442b6ad8"
 
 P = 2**64 - 59
 K = P * P
 T = 2**128
 D64_SUPPORT = comb(64, 41) * comb(41, 31) * 2**41
 D128_RAW_SUPPORT = comb(128, 31) * 2**31
+D256_RAW_SUPPORT = comb(256, 23) * 2**23
 # ceil(|support| * the pinned D128 operator-norm acceptance probability).
 D128_ACCEPTED_SUPPORT = 502822610611069237129947393810277364817
 D128_NORM_THRESHOLD = 13
@@ -57,6 +58,7 @@ NATIVE_CATALOG_AUDIT_SHA256 = "2bb3b0c78a3d69daab47ed5fd2d8e34d4aff831ff280b4492
 THETA = Fraction(1, 2**135)
 assert D64_SUPPORT == 361715808335458406596740595030299770880
 assert D128_RAW_SUPPORT == 1046949673839956231392050469602223718400
+assert D256_RAW_SUPPORT == 2873108161471518200301057969538203648000
 
 # falcon.md Section 2.1 and `FalconDegree::padded_records`.
 MAX_RECORDS = 1 << 16
@@ -319,11 +321,14 @@ def sparse_support(group: dict) -> int:
         if group["inner_route"]["kind"] != "Linf":
             raise ValueError("coefficient-packing sparse support requires Linf")
         # Akita's production ladder: D64 uses 31 +-1 and 10 +-2 entries,
-        # D128 uses 31 +-1 entries; both are raw (unfiltered) Linf supports.
+        # D128 uses 31 +-1 entries, D256 uses 23 +-1 entries; all are raw
+        # (unfiltered) Linf supports.
         if (group["subring_dimension"], pm1, pm2) == (64, 31, 10):
             return D64_SUPPORT
         if (group["subring_dimension"], pm1, pm2) == (128, 31, 0):
             return D128_RAW_SUPPORT
+        if (group["subring_dimension"], pm1, pm2) == (256, 23, 0):
+            return D256_RAW_SUPPORT
         raise ValueError("unregistered coefficient-packing sparse support")
     if group["opening_method"] != "EvaluationTrace" or pm1 != 31 or pm2 != 0:
         raise ValueError("unregistered evaluation-trace sparse support")
@@ -478,6 +483,7 @@ def artifact_support_id(support: int) -> str:
         return {
             D64_SUPPORT: "D64_signed_sparse_31_plus_10",
             D128_RAW_SUPPORT: "D128_signed_sparse_31",
+            D256_RAW_SUPPORT: "D256_signed_sparse_23",
             D128_ACCEPTED_SUPPORT: "D128_operator_norm_accepted_lower_bound",
         }[support]
     except KeyError as exc:
@@ -649,7 +655,12 @@ def native_allocation_summary(profile: dict, piop: list[dict], pcs_field: list[d
 
 
 ROOT_EVALUATION_BATCH = "PCS/L0/EvaluationBatch/1"
-ROOT_EXACT_P2_RULE = {"L": 9, "child_count": 10, "extractor_branches": True, "g": 4}
+# The complete tree branches on base eta and nine one-coordinate alternatives
+# (ten children); the checkpoint extractor does not branch at eta, where a
+# fixed source with a false claim has one bad answer per nonzero linear form.
+ROOT_EXACT_P2_RULE = {"L": 9, "checkpoint_extractor_branches": False,
+                      "checkpoint_fixed_source_numerator": 1, "child_count": 10,
+                      "complete_tree_branches": True, "g": 4}
 
 
 def check_root_evaluation_batch(native_pcs_field: list[dict], paper_row: dict,
