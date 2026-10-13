@@ -228,6 +228,4 @@ $`N^*=4,\ldots,2^{16}`$ at Falcon-1024 (29 shapes), and the selected four-group
 schedules. It is a rate per
 counted hash evaluation under the scheduled Module-SIS assumptions at the
 expected reduction times $`T_I`$; the MSIS advantages stay symbolic, so no
-unconditional numerical probability is claimed. Reconciling the paper's
-model with this implementation's exact native signature byte framing and
-four-group PCS schedule coverage remains open.
+unconditional numerical probability is claimed.
