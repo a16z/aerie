@@ -114,7 +114,7 @@ then submit {{"records": 8, "bytes": "envelope.bin"}}."#
             // The v1 PCS magic then nothing: one step past the magic check.
             TotalityInput {
                 records: 8,
-                bytes: b"aerie/falcon/v1p".to_vec().into(),
+                bytes: b"aerie/falcon/v2p".to_vec().into(),
             },
         ]
     }

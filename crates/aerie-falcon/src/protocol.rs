@@ -285,7 +285,7 @@ impl AggregationParams for Falcon1024 {
     }
 }
 
-/// Exact per-polynomial cell count of each version 1 commitment group.
+/// Exact per-polynomial cell count of each version 2 commitment group.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CommitmentCellCounts {
     pub s1: usize,
@@ -463,8 +463,8 @@ mod tests {
         );
         assert!(FalconDegree::from_degree(256).is_err());
         // One version and one root domain; the parameter-set byte separates.
-        assert_eq!(FalconDegree::Falcon512.identity_bytes(), [1, 0, 9]);
-        assert_eq!(FalconDegree::Falcon1024.identity_bytes(), [1, 0, 10]);
+        assert_eq!(FalconDegree::Falcon512.identity_bytes(), [2, 0, 9]);
+        assert_eq!(FalconDegree::Falcon1024.identity_bytes(), [2, 0, 10]);
         for degree in [FalconDegree::Falcon512, FalconDegree::Falcon1024] {
             assert_eq!(
                 FalconDegree::from_parameter_set(degree.parameter_set()),

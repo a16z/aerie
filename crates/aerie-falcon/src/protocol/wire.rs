@@ -1,4 +1,4 @@
-//! Canonical wire codec for version 1 aggregate proofs.
+//! Canonical wire codec for version 2 aggregate proofs.
 //!
 //! The encoding is strictly shaped by the public statement: every table
 //! length, round count, and claim count is derived from the record count
@@ -8,9 +8,9 @@
 //! read), an invalid record count, a wrong round
 //! or coefficient count, and any trailing data.
 //!
-//! The 27-byte PCS frame (`aerie/falcon/v1p`) carries transported salts, the
+//! The 27-byte PCS frame (`aerie/falcon/v2p`) carries transported salts, the
 //! Akita commitments, clear projection outputs, the PIOP frames, and the
-//! batched opening. The common-salt PCS frame (`aerie/falcon/v1c`) carries
+//! batched opening. The common-salt PCS frame (`aerie/falcon/v2c`) carries
 //! one shared salt and the same proof material. The projection outputs `(y, z)` sit directly after the
 //! commitments, their transcript position, as one self-delimiting Rice
 //! section (`projection::codec`, `specs/falcon.md` Section 10.4): at most
@@ -36,9 +36,9 @@ use super::{FalconDegree, MAX_RECORDS};
 
 /// Frame magic of the real-commitment wire proof carrying the transport and
 /// PCS payloads.
-const MAGIC_PCS: &[u8; 16] = b"aerie/falcon/v1p";
+const MAGIC_PCS: &[u8; 16] = b"aerie/falcon/v2p";
 /// Frame magic for PCS proofs with one shared salt.
-const MAGIC_PCS_COMMON: &[u8; 16] = b"aerie/falcon/v1c";
+const MAGIC_PCS_COMMON: &[u8; 16] = b"aerie/falcon/v2c";
 /// Known frame kinds are rejected explicitly when passed to another codec.
 const KNOWN_MAGICS: &[&[u8; 16]] = &[MAGIC_PCS, MAGIC_PCS_COMMON];
 /// Upper bound on the PCS section's length prefix. Akita's batched opening
@@ -843,22 +843,22 @@ mod tests {
             (
                 FalconDegree::Falcon512,
                 SaltMode::PerRecord,
-                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v1p"),
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v2p"),
             ),
             (
                 FalconDegree::Falcon512,
                 SaltMode::Common,
-                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v1c"),
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v2c"),
             ),
             (
                 FalconDegree::Falcon1024,
                 SaltMode::PerRecord,
-                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v1p"),
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v2p"),
             ),
             (
                 FalconDegree::Falcon1024,
                 SaltMode::Common,
-                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v1c"),
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v2c"),
             ),
         ];
         for (degree, mode, bytes) in seeds {
@@ -918,7 +918,7 @@ mod tests {
                         WireError::Malformed("unsupported parameter set")
                     ));
                 }
-                for version in [0_u16, 2, 40, 42, 0x0100] {
+                for version in [0_u16, 1, 40, 42, 0x0100] {
                     let mut wrong_version = header.clone();
                     wrong_version[HEADER_VERSION_OFFSET..HEADER_PARAMETER_SET_OFFSET]
                         .copy_from_slice(&version.to_le_bytes());
@@ -945,22 +945,53 @@ mod tests {
     }
 
     #[test]
-    fn native_v1_wire_golden_vectors() {
+    fn previous_hash_domains_are_not_accepted_as_current_proofs() {
+        for (degree, proof) in [
+            (
+                FalconDegree::Falcon512,
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v1p").as_slice(),
+            ),
+            (
+                FalconDegree::Falcon512,
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon512-v1c").as_slice(),
+            ),
+            (
+                FalconDegree::Falcon1024,
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v1p").as_slice(),
+            ),
+            (
+                FalconDegree::Falcon1024,
+                include_bytes!("../../fuzz/seeds/wire_pcs_proof/falcon1024-v1c").as_slice(),
+            ),
+        ] {
+            assert!(decode_pcs_proof(degree, proof).is_err());
+            // Changing only the magic must not bypass the numeric version check.
+            let mut relabeled = proof.to_vec();
+            relabeled[14] = b'2';
+            assert!(matches!(
+                decode_pcs_proof(degree, &relabeled),
+                Err(WireError::Malformed("unsupported version"))
+            ));
+        }
+    }
+
+    #[test]
+    fn native_v2_wire_golden_vectors() {
         let actual = [honest_512(), honest_1024()].map(|fixture| {
-            crate::protocol::instance::digest(b"aerie/test/v1/wire-golden", &fixture.3)
+            crate::protocol::instance::digest(b"aerie/test/v2/wire-golden", &fixture.3)
         });
         assert_eq!(
             actual,
             [
                 [
-                    225, 60, 85, 165, 45, 232, 60, 93, 176, 163, 112, 124, 60, 128, 199, 128, 170,
-                    169, 59, 151, 174, 1, 29, 19, 61, 81, 136, 155, 146, 15, 139, 42
+                    16, 204, 10, 206, 2, 206, 231, 204, 242, 21, 160, 99, 241, 86, 114, 14, 17,
+                    164, 20, 55, 161, 84, 15, 180, 160, 169, 122, 64, 0, 109, 123, 143
                 ],
                 [
-                    175, 135, 142, 101, 20, 107, 137, 127, 11, 36, 179, 203, 8, 109, 252, 220, 131,
-                    217, 137, 170, 26, 32, 144, 72, 39, 229, 177, 154, 27, 39, 250, 67
+                    207, 186, 135, 161, 234, 139, 116, 27, 221, 115, 105, 132, 60, 243, 137, 202,
+                    49, 197, 10, 148, 122, 134, 193, 147, 204, 207, 114, 59, 166, 198, 72, 73
                 ]
-            ],
+            ]
         );
     }
 

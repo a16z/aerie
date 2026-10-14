@@ -1,7 +1,7 @@
 //! Transport binding: canonical record bytes and verifier-local targets.
 //!
 //! The statement is bound to its source records through the canonical
-//! public-record `ParallelHash` digest over the record count, hashed public
+//! public-record tree digest over the record count, hashed public
 //! keys, salts, and messages, absorbed before commitments in the Section 10.1
 //! transcript. The wire proof transports only what the verifier does not
 //! already hold: the `HashToPoint` salts and the proof material. Common-salt
@@ -614,7 +614,7 @@ mod tests {
     #[test]
     fn verifier_rejects_setup_record_mismatch_before_body_decode() {
         let verifier_setup = FalconVerifierSetup::<Falcon512>::new(1).unwrap();
-        let mut header_only = b"aerie/falcon/v1p".to_vec();
+        let mut header_only = b"aerie/falcon/v2p".to_vec();
         header_only.extend_from_slice(&FalconDegree::Falcon512.identity_bytes());
         header_only.extend_from_slice(&2_u64.to_le_bytes());
         assert_eq!(header_only.len(), wire::HEADER_BYTES);
@@ -1172,11 +1172,11 @@ mod tests {
             .join()
             .expect("join digest gate")
             .expect("proof digest");
-        // Pins the complete version 1 PCS frame for this fixture; any change
+        // Pins the complete version 2 PCS frame for this fixture; any change
         // to the transcript, codec, or Akita pin moves it.
         assert_eq!(
-            digest, "043399adab2fa5e5d8f099f72bee5560",
-            "version 1 proof bytes moved"
+            digest, "d224b1372141d04ab2ba16faf3d9163a",
+            "version 2 proof bytes moved"
         );
     }
 
@@ -1231,8 +1231,8 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "02dfeac5304d9e689fc56326e8052c2d",
-            "version 1 Falcon-1024 proof bytes moved"
+            digest, "3b536a53c0ef1fd8618e835eb59ba2f0",
+            "version 2 Falcon-1024 proof bytes moved"
         );
     }
 
@@ -1271,8 +1271,8 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "a8c06ed611db2082fa97738ed236afcd",
-            "version 1 proof bytes moved at 4096 records"
+            digest, "286911fc3dda02ca14359de0c9cf9ab8",
+            "version 2 proof bytes moved at 4096 records"
         );
     }
 
@@ -1308,8 +1308,8 @@ mod tests {
             .expect("join digest gate")
             .expect("proof digest");
         assert_eq!(
-            digest, "b742cfc7ef5507d7432747e56d89d642",
-            "version 1 Falcon-1024 proof bytes moved at 2048 records"
+            digest, "99a89ce83dd44d1ba09ac5e8d94b9ac7",
+            "version 2 Falcon-1024 proof bytes moved at 2048 records"
         );
     }
 
@@ -1342,7 +1342,7 @@ mod tests {
                             .map(|record| (record.public_key().clone(), record.message().to_vec()))
                             .unzip();
                         for (mode, suffix) in
-                            [(SaltMode::PerRecord, "v1p"), (SaltMode::Common, "v1c")]
+                            [(SaltMode::PerRecord, "v2p"), (SaltMode::Common, "v2c")]
                         {
                             let (proof, _) =
                                 prove_aggregate_with_mode(&setup, &statement, &witness, mode)

@@ -1,11 +1,11 @@
 //! Core derivation (`specs/falcon.md` Section 6.3).
 //!
-//! Every row of every core has its own SHAKE256 stream,
+//! Every row of every core has its own cSHAKE256 stream,
 //!
 //! ```text
-//! stream(core, row) = SHAKE256(prefix(core) || LE64(row))
-//! prefix(core)      = "aerie/falcon/v1/projection/core-v1"
-//!                     || LE16(WIRE_VERSION = 1) || U8(log2 n)
+//! stream(core, row) = cSHAKE256(prefix(core) || LE64(row), N="", S="aerie/falcon/v2/projection")
+//! prefix(core)      = "aerie/falcon/v2/projection/core-v1"
+//!                     || LE16(WIRE_VERSION = 2) || U8(log2 n)
 //!                     || LE64(N_sig) || LE64(N_sig*)
 //!                     || U8(leg) || U8(group) || U8(layer)
 //!                     || LE64(rows) || LE64(columns)
@@ -40,9 +40,9 @@
 //! is the incoming channel and `u` the radix digit it contracts. The norm
 //! terminal core's column is `(43 g + c) + 172 u_5`, with `g` the group.
 
-use shake::{
+use sha3_legacy::{
     digest::{ExtendableOutput, Update, XofReader},
-    Shake256,
+    CShake256, CShake256Core,
 };
 
 #[cfg(feature = "parallel")]
@@ -55,7 +55,7 @@ use super::profile::{
 };
 
 /// XOF label of every core row.
-pub const CORE_XOF_LABEL: &[u8] = b"aerie/falcon/v1/projection/core-v1";
+pub const CORE_XOF_LABEL: &[u8] = b"aerie/falcon/v2/projection/core-v1";
 /// Group byte of the norm terminal core.
 pub const TERMINAL_GROUP: u8 = 0xff;
 /// Uniform rejection threshold: the largest multiple of 25 not above 256.
@@ -175,7 +175,10 @@ pub(crate) fn fill_core_row(
     distribution: CoreDistribution,
     out: &mut [i8],
 ) {
-    let mut hasher = Shake256::default();
+    let mut hasher = CShake256::from_core(CShake256Core::new_with_function_name(
+        b"",
+        b"aerie/falcon/v2/projection",
+    ));
     hasher.update(prefix);
     hasher.update(&(row as u64).to_le_bytes());
     let mut reader = hasher.finalize_xof();

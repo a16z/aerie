@@ -4,7 +4,7 @@
 public-salt Falcon-512 and Falcon-1024 aggregation. It defines three
 batched sumcheck stages, four multi-polynomial Akita commitment groups,
 and one batched opening. Both parameter sets use development wire version
-1 and transcript root `aerie/falcon/v1`; parameter bytes 9 and 10 separate
+2 and transcript root `aerie/falcon/v2`; parameter bytes 9 and 10 separate
 them.
 
 `crates/aerie-falcon` implements the three-stage PIOP and four commitment

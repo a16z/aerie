@@ -548,7 +548,7 @@ mod tests {
 
     fn random_point(label: &[u8], count: usize) -> Vec<E> {
         sample_point(
-            &mut TestTranscript::new(b"aerie/falcon/v1/ring-test"),
+            &mut TestTranscript::new(b"aerie/falcon/v2/ring-test"),
             core::str::from_utf8(label).unwrap(),
             count,
         )
@@ -701,7 +701,7 @@ mod tests {
                     }
                 })
                 .collect();
-            let mut transcript = TestTranscript::new(b"aerie/falcon/v1/ring-test");
+            let mut transcript = TestTranscript::new(b"aerie/falcon/v2/ring-test");
             for _ in 0..3 {
                 let projection =
                     sample_point(&mut transcript, "projection point", bits + 2).unwrap();

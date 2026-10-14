@@ -30,15 +30,19 @@ three batched sumcheck stages, four multi-polynomial Akita groups, and their
 canonical transcript and wire grammar. The ledgers include the four-group
 catalog costs.
 
-Both parameter sets use development wire version 1. PCS frames use the
-16-byte magic `aerie/falcon/v1p` for per-record salts or
-`aerie/falcon/v1c` for common salts. The transcript
-root/domain is `aerie/falcon/v1` (`lib.rs::PROTOCOL_DOMAIN`). The header carries
+Both parameter sets use development wire version 2. PCS frames use the
+16-byte magic `aerie/falcon/v2p` for per-record salts or
+`aerie/falcon/v2c` for common salts. The transcript
+root/domain is `aerie/falcon/v2` (`lib.rs::PROTOCOL_DOMAIN`). The header carries
 LE16 version at offset 16 and parameter byte 9 or 10 at offset 18. The 187
 projection outputs use the canonical Rice section defined in the Falcon
 specification.
 
-Version 1 is the current development wire. It will be frozen at the first
+Version 2 separates the projection streams, record leaves and instance digest
+from raw Falcon SHAKE256 using cSHAKE256. It changes proof bytes and transcript
+domains; version-1 frames are rejected. Signature and key encodings are unchanged.
+
+Version 2 is the current development wire. It will be frozen at the first
 public release; until then it may change without a version bump, and proof
 interchange requires the same pinned implementation and profile. After that
 release, a change to accepted statements, transcript bytes, proof grammar,

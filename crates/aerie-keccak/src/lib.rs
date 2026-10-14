@@ -26,12 +26,12 @@ const SHAKE_SUFFIX: u8 = 0x1f;
 const CSHAKE_SUFFIX: u8 = 0x04;
 const PARALLEL_HASH_FUNCTION_NAME: &[u8] = b"ParallelHash";
 
-/// One `ParallelHash256` chaining value from NIST SP 800-185 section 6.3.
+/// One 512-bit block digest for the `ParallelHash256` root encoding.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ParallelHash256ChainingValue([u8; SHAKE256_OUTPUT_64_BYTES]);
 
 impl ParallelHash256ChainingValue {
-    /// Borrow the standardized 512-bit chaining value.
+    /// Borrow the 512-bit chaining value.
     #[must_use]
     pub const fn as_bytes(&self) -> &[u8; SHAKE256_OUTPUT_64_BYTES] {
         &self.0
@@ -172,12 +172,74 @@ pub fn parallel_hash256_chaining_values(blocks: &[&[u8]]) -> Vec<ParallelHash256
         .collect()
 }
 
+/// Hash tree leaves with a distinct cSHAKE256 function name and customization.
+///
+/// The customization must be nonempty; the function name may be empty.
+/// Unlike the standardized `ParallelHash256` leaves, these hashes occupy a
+/// different sponge domain from plain SHAKE256.
+/// Combining them with [`parallel_hash256_root`] defines a customized tree hash,
+/// not NIST `ParallelHash256`.
+#[must_use]
+pub fn customized_chaining_values(
+    blocks: &[&[u8]],
+    function_name: &[u8],
+    customization: &[u8],
+) -> Vec<ParallelHash256ChainingValue> {
+    assert!(!customization.is_empty());
+    let prefix = cshake_prefix(function_name, customization);
+    let mut outputs = vec![[0; SHAKE256_OUTPUT_64_BYTES]; blocks.len()];
+    with_backend(CustomizedOutputs64 {
+        inputs: blocks,
+        prefix: &prefix,
+        outputs: &mut outputs,
+    });
+    outputs
+        .into_iter()
+        .map(ParallelHash256ChainingValue)
+        .collect()
+}
+
+struct CustomizedOutputs64<'a, 'input> {
+    inputs: &'a [&'input [u8]],
+    prefix: &'a [u8],
+    outputs: &'a mut [[u8; SHAKE256_OUTPUT_64_BYTES]],
+}
+
+impl BackendClosure for CustomizedOutputs64<'_, '_> {
+    fn call_once<B: Backend>(self) {
+        let width = B::ParSize1600::USIZE;
+        for (inputs, outputs) in self
+            .inputs
+            .chunks(width)
+            .zip(self.outputs.chunks_mut(width))
+        {
+            // Duplicate the last input only in unused lanes of the tail group.
+            let segments = Array::<_, B::ParSize1600>::from_fn(|lane| {
+                [self.prefix, inputs[lane.min(inputs.len() - 1)]]
+            });
+            let mut batch = Shake256StateBatch::<B> {
+                states: absorb_parallel::<B, _>(
+                    Array::from_fn(|lane| SegmentedCursor::new(&segments[lane])),
+                    CSHAKE_SUFFIX,
+                ),
+            };
+            let blocks = batch.squeeze_block();
+            for (block, output) in blocks.iter().zip(outputs) {
+                output.copy_from_slice(&block[..SHAKE256_OUTPUT_64_BYTES]);
+            }
+        }
+    }
+}
+
 /// Finish `ParallelHash256` from its ordered 512-bit block chaining values.
 ///
-/// This is exactly NIST SP 800-185 section 6.3 with a fixed 256-bit output:
+/// This is the root encoding from NIST SP 800-185 section 6.3 with a fixed
+/// 256-bit output:
 /// `left_encode(B) || CV[0] || ... || CV[n-1] || right_encode(n) ||
 /// right_encode(256)`, finalized by cSHAKE256 with function name
 /// `ParallelHash` and the supplied customization string.
+/// It implements standard `ParallelHash256` only when the chaining values
+/// are produced by [`parallel_hash256_chaining_values`].
 #[must_use]
 pub fn parallel_hash256_root(
     chaining_values: &[ParallelHash256ChainingValue],
@@ -217,12 +279,7 @@ fn cshake256<const OUTPUT_BYTES: usize>(
     customization: &[u8],
 ) -> [u8; OUTPUT_BYTES] {
     debug_assert!(!function_name.is_empty() || !customization.is_empty());
-    let mut framed = Vec::with_capacity(SHAKE256_RATE_BYTES + input.len());
-    append_left_encode(&mut framed, SHAKE256_RATE_BYTES as u64);
-    append_encoded_string(&mut framed, function_name);
-    append_encoded_string(&mut framed, customization);
-    let padded = framed.len().div_ceil(SHAKE256_RATE_BYTES) * SHAKE256_RATE_BYTES;
-    framed.resize(padded, 0);
+    let mut framed = cshake_prefix(function_name, customization);
     framed.extend_from_slice(input);
     let mut output = [0_u8; OUTPUT_BYTES];
     with_backend(ScalarXof {
@@ -231,6 +288,16 @@ fn cshake256<const OUTPUT_BYTES: usize>(
         output: &mut output,
     });
     output
+}
+
+fn cshake_prefix(function_name: &[u8], customization: &[u8]) -> Vec<u8> {
+    let mut prefix = Vec::new();
+    append_left_encode(&mut prefix, SHAKE256_RATE_BYTES as u64);
+    append_encoded_string(&mut prefix, function_name);
+    append_encoded_string(&mut prefix, customization);
+    let padded = prefix.len().div_ceil(SHAKE256_RATE_BYTES) * SHAKE256_RATE_BYTES;
+    prefix.resize(padded, 0);
+    prefix
 }
 
 struct ScalarXof<'a, const OUTPUT_BYTES: usize> {
@@ -848,6 +915,47 @@ mod tests {
             hasher.finalize_xof().read(&mut expected);
             assert_eq!(actual, expected, "lane input length {}", input.len());
         }
+    }
+
+    #[test]
+    fn customized_leaves_match_independent_cshake_at_block_and_lane_boundaries() {
+        for count in [0, 1, 2, 3, 4, 7, 8, 9, 17] {
+            let lengths = [0, 1, 135, 136, 137, 271, 272, 273, 16_384];
+            let messages: Vec<_> = (0..count)
+                .map(|i| vec![u8::try_from(i).unwrap(); lengths[i % lengths.len()]])
+                .collect();
+            let inputs: Vec<_> = messages.iter().map(Vec::as_slice).collect();
+            for custom in [b"aerie/falcon/v2/record-leaf".as_slice(), &[0xa5; 300]] {
+                let actual = customized_chaining_values(&inputs, b"", custom);
+                for (input, value) in inputs.iter().zip(actual) {
+                    let mut reference =
+                        CShake256::from_core(CShake256Core::new_with_function_name(b"", custom));
+                    reference.update(input);
+                    let mut expected = [0; 64];
+                    reference.finalize_xof().read(&mut expected);
+                    assert_eq!(value.as_bytes(), &expected);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn customized_leaf_does_not_alias_a_signature_hash_with_identical_input() {
+        // A record message can contain a complete raw FN-DSA hash input,
+        // aligned to one tree leaf. A label on the root cannot separate it.
+        let mut frame = vec![0x41; 16_384];
+        frame[104..106].copy_from_slice(&[0, 0]); // raw mode, empty context
+        let raw = shake256_64_batch(&[&frame])[0];
+        let leaf = customized_chaining_values(&[&frame], b"", b"aerie/falcon/v2/record-leaf")[0];
+        let projection =
+            customized_chaining_values(&[&frame], b"", b"aerie/falcon/v2/projection")[0];
+        let instance = customized_chaining_values(&[&frame], b"", b"aerie/falcon/v2/instance")[0];
+        assert_ne!(&raw, leaf.as_bytes());
+        assert_ne!(&raw, projection.as_bytes());
+        assert_ne!(&raw, instance.as_bytes());
+        assert_ne!(leaf, projection);
+        assert_ne!(leaf, instance);
+        assert_ne!(projection, instance);
     }
 
     #[test]

@@ -415,7 +415,7 @@ mod tests {
 
     fn random_point(label: &[u8], count: usize) -> Vec<E> {
         sample_point(
-            &mut TestTranscript::new(b"aerie/falcon/v1/ring-functional-test"),
+            &mut TestTranscript::new(b"aerie/falcon/v2/ring-functional-test"),
             core::str::from_utf8(label).unwrap(),
             count,
         )

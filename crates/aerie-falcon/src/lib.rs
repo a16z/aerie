@@ -52,10 +52,10 @@ pub use substrate::{BaseField, OpeningField};
 
 /// Falcon aggregation wire version developed by this crate, shared by both
 /// parameter sets.
-pub const WIRE_VERSION: u16 = 1;
-/// Root Fiat Shamir domain for Falcon wire version 1, shared by both
+pub const WIRE_VERSION: u16 = 2;
+/// Root Fiat Shamir domain for Falcon wire version 2, shared by both
 /// parameter sets.
-pub const PROTOCOL_DOMAIN: &[u8] = b"aerie/falcon/v1";
+pub const PROTOCOL_DOMAIN: &[u8] = b"aerie/falcon/v2";
 
 /// Release status of a protocol version.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn wire_identity_remains_explicitly_in_development() {
-        assert_eq!(WIRE_VERSION, 1);
+        assert_eq!(WIRE_VERSION, 2);
         assert_eq!(
             FalconDegree::Falcon512.identity_bytes()[..2],
             WIRE_VERSION.to_le_bytes()
@@ -83,7 +83,7 @@ mod tests {
             FalconDegree::Falcon1024.identity_bytes()[..2],
             WIRE_VERSION.to_le_bytes()
         );
-        assert_eq!(PROTOCOL_DOMAIN, b"aerie/falcon/v1");
+        assert_eq!(PROTOCOL_DOMAIN, b"aerie/falcon/v2");
         assert_eq!(PROTOCOL_STABILITY, Stability::Development);
     }
 }

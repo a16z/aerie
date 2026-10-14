@@ -116,7 +116,7 @@ pub fn absorb_outputs(
 ) -> Result<(), AkitaError> {
     let mut bytes = Vec::new();
     outputs.encode_wire(&mut bytes).map_err(invalid)?;
-    transcript.absorb_proof("aerie/falcon/v1/projection/output", 1, &bytes)?;
+    transcript.absorb_proof("aerie/falcon/v2/projection/output", 1, &bytes)?;
     Ok(())
 }
 

@@ -38,6 +38,7 @@ rayon = { workspace = true, optional = true }
 aerie-falcon-statement = { path = "../aerie-falcon-statement" }
 tracing = { workspace = true }
 shake = { workspace = true }
+sha3-legacy = { workspace = true }
 spongefish = { workspace = true }
 
 [dev-dependencies]

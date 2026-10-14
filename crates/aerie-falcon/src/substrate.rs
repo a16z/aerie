@@ -1,4 +1,4 @@
-//! Field, configuration, and PCS wire-shape substrate for wire version 1.
+//! Field, configuration, and PCS wire-shape substrate for wire version 2.
 //!
 //! These aliases select Akita's fp64 proof-optimized field pair. The wire-shape
 //! helper mirrors the exact transmitted-coefficient layout of the pinned Akita

@@ -34,7 +34,7 @@ fn roundtrip(degree: FalconDegree, batch: &FalconWitness) {
         9
     };
     let prover_stage2_gammas = prover
-        .challenge_extensions("aerie/falcon/v1/stage2/gamma", stage2_gammas)
+        .challenge_extensions("aerie/falcon/v2/stage2/gamma", stage2_gammas)
         .unwrap();
     let mut verifier = verifier_for_work(degree, batch.live_rows, prover.work_bytes());
 
@@ -61,7 +61,7 @@ fn roundtrip(degree: FalconDegree, batch: &FalconWitness) {
     assert_eq!(
         prover_stage2_gammas,
         verifier
-            .challenge_extensions("aerie/falcon/v1/stage2/gamma", stage2_gammas)
+            .challenge_extensions("aerie/falcon/v2/stage2/gamma", stage2_gammas)
             .unwrap()
     );
 
@@ -165,14 +165,14 @@ fn replay_points(
     projection::absorb_outputs(outputs, &mut transcript).expect("output absorption");
     let basis_count = 2 + usize::from(degree == FalconDegree::Falcon1024);
     let _mu = transcript
-        .challenge_extensions("aerie/falcon/v1/mu", 8)
+        .challenge_extensions("aerie/falcon/v2/mu", 8)
         .expect("mu");
     let rounds = degree.logn() + records.trailing_zeros() as usize;
     let tau = transcript
-        .challenge_extensions("aerie/falcon/v1/tau", rounds)
+        .challenge_extensions("aerie/falcon/v2/tau", rounds)
         .expect("tau");
     let _gammas = transcript
-        .challenge_extensions("aerie/falcon/v1/stage1/gamma", basis_count + 1)
+        .challenge_extensions("aerie/falcon/v2/stage1/gamma", basis_count + 1)
         .expect("gammas");
     let mut point = Vec::with_capacity(rounds);
     for (round, message) in proof.rounds.iter().enumerate() {
@@ -330,7 +330,7 @@ fn projection_lambda_is_the_eight_coordinate_monomial_batch() {
     projection::absorb_outputs(&outputs, &mut actual_transcript).unwrap();
     projection::absorb_outputs(&outputs, &mut reference_transcript).unwrap();
     let mu = reference_transcript
-        .challenge_extensions("aerie/falcon/v1/mu", 8)
+        .challenge_extensions("aerie/falcon/v2/mu", 8)
         .unwrap();
     let actual = super::sample_lambda(&mut actual_transcript).unwrap();
 
@@ -348,10 +348,10 @@ fn projection_lambda_is_the_eight_coordinate_monomial_batch() {
     }
     assert_eq!(
         actual_transcript
-            .challenge_extensions("aerie/falcon/v1/tau", 12)
+            .challenge_extensions("aerie/falcon/v2/tau", 12)
             .unwrap(),
         reference_transcript
-            .challenge_extensions("aerie/falcon/v1/tau", 12)
+            .challenge_extensions("aerie/falcon/v2/tau", 12)
             .unwrap()
     );
 }

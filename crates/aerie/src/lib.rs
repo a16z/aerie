@@ -71,7 +71,7 @@ pub use falcon::{
 mod tests {
     #[test]
     fn falcon_is_available() {
-        assert_eq!(crate::falcon::WIRE_VERSION, 1);
+        assert_eq!(crate::falcon::WIRE_VERSION, 2);
         assert_eq!(
             crate::falcon::PROTOCOL_STABILITY,
             crate::falcon::Stability::Development,

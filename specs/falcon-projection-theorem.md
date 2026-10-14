@@ -128,7 +128,7 @@ term alone. Every other failure mode is charged to its own ledger item
   transcript, the specified cores are independent. Every entry of a norm core is
   independent with $`\Pr[-1]=\Pr[1]=\tfrac14`$, $`\Pr[0]=\tfrac12`$. Every entry
   of a residual core is independent and uniform on $`\{-12,\ldots,12\}`$. This
-  models the per-row SHAKE256 streams of (F §6.3) as a random oracle, with
+  models the per-row cSHAKE256 streams of (F §6.3) as a random oracle, with
   the exact bit-pair map (F §6.3) and the unbiased rejection map (F §6.3).
   In the Fiat–Shamir compilation the per-transcript bound proved below is
   multiplied by the adversary's random-oracle query count in the composition
@@ -1200,7 +1200,7 @@ script.
 1. **H1.** The theorems take the entries of the cores to be independent with
    the two laws of H1. The three statements on the byte maps are about one
    byte, and the final theorems do not use them. The derivation of the bytes
-   from the transcript (F §6.3) is not formalized: the SHAKE256 streams
+   from the transcript (F §6.3) is not formalized: the cSHAKE256 streams
    modeled as a random oracle, the order of the bytes within a row of a core,
    and the bytes read after a rejected byte.
 2. **H2.** The theorems fix the source and then sample the cores. That the

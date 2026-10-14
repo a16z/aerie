@@ -25,8 +25,8 @@ pub mod slack_reduction;
 #[cfg(test)]
 mod source_folds;
 
-const GAMMA_SITE: &str = "aerie/falcon/v1/stage3/gamma";
-const TERMINAL_SITE: &str = "aerie/falcon/v1/stage3/terminal";
+const GAMMA_SITE: &str = "aerie/falcon/v2/stage3/gamma";
+const TERMINAL_SITE: &str = "aerie/falcon/v2/stage3/terminal";
 const TERMINAL_EVALUATION_COUNT: usize = 9;
 const INSTANCE_COUNT: usize = 12;
 

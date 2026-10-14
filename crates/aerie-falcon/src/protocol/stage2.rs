@@ -12,8 +12,8 @@ use akita_algebra::split_eq::GruenSplitEq;
 use akita_error::AkitaError;
 use jolt_field::Zero;
 use range_leaf::{advance, instances};
-const GAMMA_SITE: &str = "aerie/falcon/v1/stage2/gamma";
-const TERMINAL_SITE: &str = "aerie/falcon/v1/stage2/terminal";
+const GAMMA_SITE: &str = "aerie/falcon/v2/stage2/gamma";
+const TERMINAL_SITE: &str = "aerie/falcon/v2/stage2/terminal";
 #[derive(Clone, Debug, PartialEq)]
 pub struct Stage2Proof {
     pub rounds: Vec<[E; 4]>,
@@ -126,11 +126,11 @@ pub(crate) fn prove_prepared(
             }
         }
         t.absorb_extensions(
-            &format!("aerie/falcon/v1/stage2/round/{round}/message"),
+            &format!("aerie/falcon/v2/stage2/round/{round}/message"),
             &message,
         )?;
         let challenge = t.challenge_extensions(
-            &format!("aerie/falcon/v1/stage2/round/{round}/challenge"),
+            &format!("aerie/falcon/v2/stage2/round/{round}/challenge"),
             1,
         )?[0];
         claim = advance(claim, stage1.point[round], message, challenge);
@@ -172,11 +172,11 @@ pub fn verify(
     let mut point = Vec::with_capacity(proof.rounds.len());
     for (round, (&message, &alpha)) in proof.rounds.iter().zip(&stage1.point).enumerate() {
         t.absorb_extensions(
-            &format!("aerie/falcon/v1/stage2/round/{round}/message"),
+            &format!("aerie/falcon/v2/stage2/round/{round}/message"),
             &message,
         )?;
         let challenge = t.challenge_extensions(
-            &format!("aerie/falcon/v1/stage2/round/{round}/challenge"),
+            &format!("aerie/falcon/v2/stage2/round/{round}/challenge"),
             1,
         )?[0];
         claim = advance(claim, alpha, message, challenge);

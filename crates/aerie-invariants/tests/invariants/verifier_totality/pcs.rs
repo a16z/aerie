@@ -31,7 +31,7 @@ fn valid_patched_and_garbage_inputs_never_panic() {
     assert_not_violated(inv.check(&feed(8, Vec::new())), "empty bytes");
     assert_not_violated(inv.check(&feed(8, vec![0xAB; 64])), "pure garbage");
     assert_not_violated(
-        inv.check(&feed(8, b"aerie/falcon/v1p".to_vec())),
+        inv.check(&feed(8, b"aerie/falcon/v2p".to_vec())),
         "magic then nothing",
     );
 }

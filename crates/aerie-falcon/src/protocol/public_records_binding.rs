@@ -1,4 +1,4 @@
-//! Canonical Falcon-v1 public-record encoding and `ParallelHash256` binding.
+//! Canonical public-record encoding and domain-separated tree binding.
 
 use aerie_falcon_native::{
     preprocess::HashedVerifyingKey, source::CanonicalPublicKeyBytes, FalconParams,
@@ -11,10 +11,11 @@ use super::{
     MAX_RECORDS,
 };
 
-/// Fixed NIST `ParallelHash256` block size of the Falcon-v1 public-record binding.
+/// Fixed block size of the public-record tree binding.
 pub const PUBLIC_RECORDS_BINDING_BLOCK_BYTES: usize = 16 * 1024;
-const BINDING_CUSTOMIZATION: &[u8] = b"aerie/falcon/v1/public-records-binding";
-const COMMON_BINDING_CUSTOMIZATION: &[u8] = b"aerie/falcon/v1/public-records-binding/common-salt";
+const LEAF_CUSTOMIZATION: &[u8] = b"aerie/falcon/v2/record-leaf";
+const BINDING_CUSTOMIZATION: &[u8] = b"aerie/falcon/v2/public-records-binding";
+const COMMON_BINDING_CUSTOMIZATION: &[u8] = b"aerie/falcon/v2/public-records-binding/common-salt";
 const BINDING_COUNT_BYTES: usize = 8;
 const BINDING_MESSAGE_LENGTH_BYTES: usize = 8;
 
@@ -24,7 +25,7 @@ use crate::AggregationError as Error;
 ///
 /// Each canonical key is first committed by FN-DSA's existing 64-byte `hpk`.
 /// The ordered stream `LE64(records) || (hpk || salt || LE64(message.len()) ||
-/// message)*` is then processed by NIST `ParallelHash256` with a fixed 16-KiB
+/// message)*` is then processed by a customized cSHAKE256 tree with a fixed 16-KiB
 /// block size and `BINDING_CUSTOMIZATION`. The segmented implementation does
 /// not materialize that logical stream or pad records to block boundaries.
 #[cfg(any(test, feature = "bench-internals", feature = "adversarial-internals"))]
@@ -244,7 +245,7 @@ impl<'a> PublicBindingStream<'a> {
             .map(|block| self.block(block))
             .collect::<Vec<_>>();
         let inputs = blocks.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        aerie_keccak::parallel_hash256_chaining_values(&inputs)
+        aerie_keccak::customized_chaining_values(&inputs, b"", LEAF_CUSTOMIZATION)
     }
 }
 
@@ -338,12 +339,33 @@ mod tests {
         let reference_blocks = materialized
             .chunks(PUBLIC_RECORDS_BINDING_BLOCK_BYTES)
             .collect::<Vec<_>>();
-        let reference_values = aerie_keccak::parallel_hash256_chaining_values(&reference_blocks);
-        assert_eq!(stream.chaining_values(), reference_values);
-        let reference = aerie_keccak::parallel_hash256_root(
-            &reference_values,
-            PUBLIC_RECORDS_BINDING_BLOCK_BYTES,
-            BINDING_CUSTOMIZATION,
+        // Independent RustCrypto cSHAKE, including the complete root framing.
+        use sha3_legacy::{
+            digest::{ExtendableOutput, Update, XofReader},
+            CShake256, CShake256Core,
+        };
+        let hash = |input: &[u8], name: &[u8], custom: &[u8], out: &mut [u8]| {
+            let mut h = CShake256::from_core(CShake256Core::new_with_function_name(name, custom));
+            h.update(input);
+            h.finalize_xof().read(out);
+        };
+        let actual_values = stream.chaining_values();
+        let mut root_input = vec![2, 0x40, 0]; // left_encode(16384)
+        for (block, actual) in reference_blocks.iter().zip(&actual_values) {
+            let mut leaf = [0; 64];
+            hash(block, b"", b"aerie/falcon/v2/record-leaf", &mut leaf);
+            assert_eq!(actual.as_bytes(), &leaf);
+            root_input.extend_from_slice(&leaf);
+        }
+        assert!(reference_blocks.len() < 256);
+        root_input.extend_from_slice(&[u8::try_from(reference_blocks.len()).unwrap(), 1]);
+        root_input.extend_from_slice(&[1, 0, 2]); // right_encode(256)
+        let mut reference = [0; 32];
+        hash(
+            &root_input,
+            b"ParallelHash",
+            b"aerie/falcon/v2/public-records-binding",
+            &mut reference,
         );
         assert_eq!(
             public_records_binding_from_hashed_keys(&hashed_keys, &salts, &messages)
@@ -373,9 +395,8 @@ mod tests {
         assert_eq!(
             single,
             [
-                0x8d, 0x26, 0x0f, 0xea, 0x22, 0x8b, 0x80, 0x4e, 0xc8, 0x13, 0xe1, 0x57, 0x2c, 0x63,
-                0x4a, 0x14, 0xf3, 0x23, 0xf5, 0xc8, 0x35, 0x71, 0xd5, 0x81, 0xbc, 0x57, 0xcd, 0xcd,
-                0x4b, 0xf7, 0x2e, 0x61,
+                127, 204, 179, 156, 162, 95, 67, 240, 76, 183, 208, 57, 220, 167, 103, 152, 176,
+                90, 130, 130, 173, 189, 36, 127, 186, 241, 177, 61, 104, 70, 97, 76
             ]
         );
         assert_eq!(single, parallel);

@@ -17,8 +17,8 @@ mod projection_link;
 use basis16_product::Prover as Basis16Prover;
 use projection_link::{projection_weights_at, ProjectionLinkProver};
 
-const GAMMA_SITE: &str = "aerie/falcon/v1/stage1/gamma";
-const TERMINAL_SITE: &str = "aerie/falcon/v1/stage1/terminal";
+const GAMMA_SITE: &str = "aerie/falcon/v2/stage1/gamma";
+const TERMINAL_SITE: &str = "aerie/falcon/v2/stage1/terminal";
 
 /// Wire message for stage one.
 #[derive(Clone, Debug, PartialEq)]
@@ -87,7 +87,7 @@ pub(crate) fn prove_prepared(
             .map_err(invalid)?
             .logn();
         let rounds = logn + tables.records().trailing_zeros() as usize;
-        let tau = transcript.challenge_extensions("aerie/falcon/v1/tau", rounds)?;
+        let tau = transcript.challenge_extensions("aerie/falcon/v2/tau", rounds)?;
         let basis_count = 2 + usize::from(batch.degree() == FalconDegree::Falcon1024.degree());
         let gammas = transcript.challenge_extensions(GAMMA_SITE, basis_count + 1)?;
         Ok((lambda, logn, rounds, tau, basis_count, gammas))
@@ -373,7 +373,7 @@ pub fn verify(
     projection::check_outputs(degree, outputs)?;
     projection::absorb_outputs(outputs, transcript)?;
     let lambda = sample_lambda(transcript)?;
-    let tau = transcript.challenge_extensions("aerie/falcon/v1/tau", rounds)?;
+    let tau = transcript.challenge_extensions("aerie/falcon/v2/tau", rounds)?;
     let gammas = transcript.challenge_extensions(GAMMA_SITE, source_count + 1)?;
     let target = output_claim(outputs, &lambda);
     let mut claim = gammas[source_count] * target;
@@ -461,7 +461,7 @@ fn absorb_terminal(
 }
 
 fn sample_lambda(transcript: &mut impl PioTranscript) -> Result<Vec<E>, AkitaError> {
-    let mu = transcript.challenge_extensions("aerie/falcon/v1/mu", 8)?;
+    let mu = transcript.challenge_extensions("aerie/falcon/v2/mu", 8)?;
     Ok((0..OUTPUT_COUNT)
         .map(|index| {
             (0..8).fold(E::one(), |weight, bit| {

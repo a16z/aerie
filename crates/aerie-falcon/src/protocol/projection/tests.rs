@@ -8,11 +8,54 @@ use super::super::{FalconDegree, FalconWitness};
 use super::cores::{
     core_xof_prefix, decode_ternary, decode_uniform, CoreContext, CoreId, Leg, ProjectionCores,
 };
-use super::profile::{Geometry, FIRST_CHANNELS};
+use super::profile::{CoreDistribution, Geometry, FIRST_CHANNELS};
 use super::*;
 
 const SEED: [u8; 32] = [0x5a; 32];
 const DEGREES: [FalconDegree; 2] = [FalconDegree::Falcon512, FalconDegree::Falcon1024];
+
+#[test]
+fn core_rows_match_independent_customized_keccak() {
+    let prefix = b"core row reference fixture";
+    let row = 17_usize;
+    let mut input = prefix.to_vec();
+    input.extend_from_slice(&(row as u64).to_le_bytes());
+    let reference =
+        aerie_keccak::customized_chaining_values(&[&input], b"", b"aerie/falcon/v2/projection");
+    let bytes = reference[0].as_bytes();
+    let mut norm = [0; 256];
+    super::cores::fill_core_row(
+        prefix,
+        row,
+        CoreDistribution::TernaryQuarterHalfQuarter,
+        &mut norm,
+    );
+    for (col, value) in norm.iter().enumerate() {
+        let pair = (bytes[col / 4] >> (2 * (col % 4))) & 3;
+        assert_eq!(
+            *value,
+            match pair {
+                0 => -1,
+                3 => 1,
+                _ => 0,
+            }
+        );
+    }
+    let mut residual = [0; 32];
+    super::cores::fill_core_row(
+        prefix,
+        row,
+        CoreDistribution::UniformSymmetric { bound: 12 },
+        &mut residual,
+    );
+    let expected: Vec<_> = bytes
+        .iter()
+        .filter(|&&b| b < 250)
+        .map(|&b| i8::try_from(b % 25).unwrap() - 12)
+        .take(32)
+        .collect();
+    assert_eq!(residual.as_slice(), expected);
+}
 
 // ---------------------------------------------------------------- fixtures
 
@@ -330,7 +373,7 @@ fn from_hex(hex: &str) -> Vec<u8> {
 }
 
 /// Expected values computed independently with Python's
-/// `hashlib.shake_256` over the documented framing, seed `0x00..0x1f`,
+/// `PyCryptodome` `Crypto.Hash.cSHAKE256` over the documented framing, seed `0x00..0x1f`,
 /// Falcon-512, `N_sig = 5`, `N_sig* = 8` (radices `[4096, 2, 1, 1, 1]` and
 /// `[2048, 1, 2]`).
 #[test]
@@ -359,8 +402,8 @@ fn projection_core_derivation_known_answer() {
     assert_eq!(
         prefix,
         from_hex(concat!(
-            "61657269652f66616c636f6e2f76312f70726f6a656374696f6e2f636f72652d7631",
-            "010009",
+            "61657269652f66616c636f6e2f76322f70726f6a656374696f6e2f636f72652d7631",
+            "020009",
             "0500000000000000",
             "0800000000000000",
             "000001",
@@ -381,30 +424,30 @@ fn projection_core_derivation_known_answer() {
     let head = |row: &[i8]| row[..16].to_vec();
     assert_eq!(
         head(cores.norm(0, 1).row(0)),
-        [0, 1, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0, 1, -1, 1, 0]
+        [0, 0, -1, 1, 1, 0, 1, -1, 0, -1, 1, 0, 0, 1, -1, 0]
     );
     assert_eq!(
         head(cores.norm(0, 1).row(42)),
-        [0, 1, 0, 0, 0, 0, 0, -1, 0, -1, -1, 0, 0, 0, 1, 0]
+        [0, 1, 0, 1, 1, 0, 0, 0, 0, -1, 1, 0, 1, -1, 0, 0]
     );
     assert_eq!(cores.norm(3, 2).cols, 86);
     assert_eq!(
         head(cores.norm(3, 2).row(7)),
-        [0, -1, -1, 0, -1, 0, 1, -1, -1, 0, 0, -1, 1, -1, 0, 0]
+        [0, -1, -1, 0, 1, -1, 1, -1, -1, -1, 1, 1, -1, 0, -1, 0]
     );
     assert_eq!(cores.norm_terminal.cols, 172);
     assert_eq!(
         head(cores.norm_terminal.row(155)),
-        [1, -1, 1, 0, 1, 0, 0, 0, 0, -1, -1, 0, -1, 1, -1, 0]
+        [-1, 0, 1, 1, -1, -1, 0, 0, -1, 0, -1, 0, 0, -1, 1, 0]
     );
     assert_eq!(
         head(cores.residual(1).row(0)),
-        [4, -1, 6, 2, -5, 5, 8, -3, 12, -9, 7, 1, -12, -9, 7, 1]
+        [5, 9, 7, 5, -9, 8, 4, 10, 6, -5, -9, 12, 1, -5, -6, 10]
     );
     assert_eq!(cores.residual(3).cols, 62);
     assert_eq!(
         head(cores.residual(3).row(30)),
-        [2, 9, 6, 1, 10, 7, 5, 6, -2, 3, 11, -11, 6, -9, -3, -1]
+        [0, 5, 8, -12, 4, -2, -7, -1, -4, -6, 3, 3, -12, 9, -6, 8]
     );
 
     // Every framing field separates streams.

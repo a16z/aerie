@@ -36,11 +36,11 @@ pub(crate) fn append_round(
     message: [E; 3],
 ) -> Result<E, AkitaError> {
     transcript.absorb_extensions(
-        &format!("aerie/falcon/v1/{stage}/round/{round}/message"),
+        &format!("aerie/falcon/v2/{stage}/round/{round}/message"),
         &message,
     )?;
     Ok(transcript.challenge_extensions(
-        &format!("aerie/falcon/v1/{stage}/round/{round}/challenge"),
+        &format!("aerie/falcon/v2/{stage}/round/{round}/challenge"),
         1,
     )?[0])
 }

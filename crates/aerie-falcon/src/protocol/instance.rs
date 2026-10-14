@@ -1,8 +1,8 @@
-//! Canonical public instance binding for the Falcon v1 PIOP.
+//! Canonical public instance binding for the Falcon v2 PIOP.
 
-use shake::{
+use sha3_legacy::{
     digest::{ExtendableOutput, Update, XofReader},
-    Shake256,
+    CShake256, CShake256Core,
 };
 
 use super::{manifest::CommitmentManifest, wire::SaltMode};
@@ -10,22 +10,25 @@ use crate::AggregationError;
 
 pub(crate) const INSTANCE_BYTES: usize = 398;
 
-/// SHAKE256 over the two length-prefixed byte strings used by v1 domains.
+/// cSHAKE256 over the two length-prefixed byte strings used by protocol domains.
 pub(crate) fn digest(label: &[u8], bytes: &[u8]) -> [u8; 32] {
     let mut hash = framed_hash(label, bytes.len());
     hash.update(bytes);
     finish(hash)
 }
 
-fn framed_hash(label: &[u8], len: usize) -> Shake256 {
-    let mut hash = Shake256::default();
+fn framed_hash(label: &[u8], len: usize) -> CShake256 {
+    let mut hash = CShake256::from_core(CShake256Core::new_with_function_name(
+        b"",
+        b"aerie/falcon/v2/instance",
+    ));
     hash.update(&(label.len() as u64).to_le_bytes());
     hash.update(label);
     hash.update(&(len as u64).to_le_bytes());
     hash
 }
 
-fn finish(hash: Shake256) -> [u8; 32] {
+fn finish(hash: CShake256) -> [u8; 32] {
     let mut digest = [0; 32];
     hash.finalize_xof().read(&mut digest);
     digest
@@ -62,6 +65,20 @@ mod tests {
     use crate::protocol::FalconDegree;
 
     #[test]
+    fn instance_digest_matches_independent_customized_keccak() {
+        let label = b"aerie/falcon/v2/instance";
+        let record = [0xa5; INSTANCE_BYTES];
+        let mut input = Vec::new();
+        input.extend_from_slice(&(label.len() as u64).to_le_bytes());
+        input.extend_from_slice(label);
+        input.extend_from_slice(&(record.len() as u64).to_le_bytes());
+        input.extend_from_slice(&record);
+        let reference =
+            aerie_keccak::customized_chaining_values(&[&input], b"", b"aerie/falcon/v2/instance");
+        assert_eq!(digest(label, &record), reference[0].as_bytes()[..32]);
+    }
+
+    #[test]
     fn every_instance_field_has_its_specified_position() {
         for (degree, parameter, layout, n, padded) in [
             (FalconDegree::Falcon512, 9, 5_u32, 512_u32, 8_u64),
@@ -76,7 +93,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(bytes.len(), 398);
-            assert_eq!(&bytes[0..2], &1_u16.to_le_bytes());
+            assert_eq!(&bytes[0..2], &crate::WIRE_VERSION.to_le_bytes());
             assert_eq!(bytes[2], parameter);
             assert_eq!(&bytes[3..7], &layout.to_le_bytes());
             assert_eq!(&bytes[7..11], &n.to_le_bytes());

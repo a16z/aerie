@@ -6,12 +6,12 @@
 | --- | --- |
 | Status | normative standalone specification; transcript implementation complete |
 | Audience | Aerie protocol and implementation contributors |
-| Applies to | homogeneous Falcon-512 or Falcon-1024 aggregates, wire version 1 |
-| Implementation status | three-stage PIOP, native v1 transcript with scheduled grinding, and four native groups implemented (Section 12.3) |
+| Applies to | homogeneous Falcon-512 or Falcon-1024 aggregates, wire version 2 |
+| Implementation status | three-stage PIOP, native transcript with scheduled grinding, and four native groups implemented (Section 12.3) |
 | Projection theorem | [falcon-projection-theorem.md](falcon-projection-theorem.md) |
 | Last reviewed | 2026-09-27 |
 
-Section 10 defines the first frozen v1 format. Current development proofs implement its transcript and grinding requirements. The acceptance criteria in Section 13 gate implementation conformance.
+Section 10 defines the version-2 format. Current development proofs implement its transcript and grinding requirements. The acceptance criteria in Section 13 gate implementation conformance.
 
 The uppercase terms MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are normative requirements as defined by BCP 14 when, and only when, they appear in uppercase.
 
@@ -128,7 +128,7 @@ and that $`s_{2,i}`$ has a valid compressed encoding of at most $`\mathsf{sbytel
 
 The canonical byte layer MUST accept exactly the selected Falcon parameter set. It uses the existing Falcon decoding, key parsing, rejection sampling, byte order, centered reduction, and HashToPoint rules. The public key and message are statement inputs. The proof transports the $`N_{\rm sig}`$ live 40-byte salts in record order, or one shared 40-byte salt in common-salt mode (Section 10.2).
 
-The transcript binds the ordered public records with one ParallelHash256 digest. For each record define
+The transcript binds the ordered public records with one domain-separated tree digest. For each record define
 ```math
 \mathsf{hpk}_i=\mathrm{SHAKE256}(\mathsf{pk}_i,64).
 ```
@@ -142,11 +142,11 @@ X=\mathrm{LE64}(N_{\rm sig})\Vert
 \right).
 \qquad(2.3)
 ```
-The digest is NIST SP 800-185 ParallelHash256 with block size 16,384 bytes and output length 256 bits. Per-record mode uses customization string ASCII aerie/falcon/v1/public-records-binding. Common-salt mode MUST instead use ASCII aerie/falcon/v1/public-records-binding/common-salt. Both modes hash the same logical input $`X`$, including the expanded salt for every record; equation (2.4) shows the per-record customization.
+The digest uses cSHAKE256 leaves with block size 16,384 bytes and the NIST SP 800-185 ParallelHash256 root encoding with output length 256 bits. Because the leaves are customized, the complete construction is not standard ParallelHash256. cSHAKE output lengths below are in bits. Per-record mode uses customization string ASCII aerie/falcon/v2/public-records-binding. Common-salt mode MUST instead use ASCII aerie/falcon/v2/public-records-binding/common-salt. Both modes hash the same logical input $`X`$, including the expanded salt for every record; equation (2.4) shows the per-record customization.
 
 Partition $`X`$ into consecutive blocks $`X_0,\ldots,X_{b-1}`$, each 16,384 bytes except possibly the last. There is no record-level or block-level padding in $`X`$. Compute
 ```math
-\mathsf{CV}_j=\mathrm{SHAKE256}(X_j,64),
+\mathsf{CV}_j=\mathrm{cSHAKE256}(X_j,512,\varepsilon,\texttt{aerie/falcon/v2/record-leaf}),
 ```
 ```math
 Z=\mathrm{left\_encode}(16{,}384)\Vert
@@ -158,10 +158,21 @@ Z=\mathrm{left\_encode}(16{,}384)\Vert
 \mathsf{public\_records}=
 \mathrm{cSHAKE256}
 (Z,256,\texttt{ParallelHash},
-\texttt{aerie/falcon/v1/public-records-binding}).
+\texttt{aerie/falcon/v2/public-records-binding}).
 \qquad(2.4)
 ```
 The implementation MUST stream the same logical byte string, preserve record order, include empty messages with a zero length, and reuse the HashToPoint public-key hash. Raw messages and salts MAY cross a 16-KiB boundary. A verifier MUST reject a statement shape disagreement before proving or verifying.
+
+The projection streams (Section 6.3), record leaves and instance digest
+(Section 10.1) use three distinct cSHAKE customizations with an empty function
+name, denoted $`\varepsilon`$ above. Their nonempty customizations separate
+them from the raw SHAKE256
+used by Falcon key hashing and HashToPoint, even when application-controlled
+messages make the input bytes identical. Record roots use function name
+`ParallelHash` and the mode-specific customization above. Independence of
+these domains remains a random-oracle modeling assumption. Key hashing and
+HashToPoint still share raw SHAKE256; this change does not establish an
+independent-oracle reduction for those two functions or for Akita setup expansion.
 
 ## 3. Notation, domains, and witness tables
 
@@ -457,11 +468,11 @@ y_{{\rm res},o}=\sum_{c'\lt 31}\sum_{x_3\lt r'_3}B_3[o,c'+31x_3]
 ```
 An octet $`b_{\rm byte}`$ is accepted only if $`b_{\rm byte}\lt 250`$, and maps to $`(b_{\rm byte}\bmod25)-12`$. Values 250 through 255 are discarded and sampling continues. This rejection rule gives the exact uniform distribution.
 
-The transcript samples one 32-byte seed after the four commitments. For each core row, form $`F_{\rm core}`$ as the ASCII label aerie/falcon/v1/projection/core-v1, followed by wire version LE16, parameter-set byte, $`N_{\rm sig}`$ and $`N_{\rm sig}^\star`$ as LE64, leg/group/layer as U8, row and column counts as LE64, radix count as U8, all radices as LE64, seed length as LE64, and the seed. Derive row $`a`$ as $`\mathrm{SHAKE256}(F_{\rm core}\Vert\mathrm{LE64}(a))`$. The norm prefix cores use leg 0, group bytes 0 through 3, and layer bytes 1 through 4. The norm terminal uses leg 0, group 255, layer 5. Residual cores use leg 1, group 0, layers 1 through 3. Each core row has an independent SHAKE input. A core is shared only across its own fibers; implementations MUST NOT reuse a core or row across groups or legs or replace the row streams with one monolithic stream.
+The transcript samples one 32-byte seed after the four commitments. For each core row, form $`F_{\rm core}`$ as the ASCII label aerie/falcon/v2/projection/core-v1, followed by wire version LE16, parameter-set byte, $`N_{\rm sig}`$ and $`N_{\rm sig}^\star`$ as LE64, leg/group/layer as U8, row and column counts as LE64, radix count as U8, all radices as LE64, seed length as LE64, and the seed. Derive row $`a`$ as $`\mathrm{cSHAKE256}(F_{\rm core}\Vert\mathrm{LE64}(a),L,\varepsilon,\texttt{aerie/falcon/v2/projection})`$. The norm prefix cores use leg 0, group bytes 0 through 3, and layer bytes 1 through 4. The norm terminal uses leg 0, group 255, layer 5. Residual cores use leg 1, group 0, layers 1 through 3. Here $`L`$ is the number of stream bits consumed by the row sampler; extending a stream preserves its earlier bytes. Each core row has a distinct input within this cSHAKE domain. A core is shared only across its own fibers; implementations MUST NOT reuse a core or row across groups or legs or replace the row streams with one monolithic stream.
 
 ### 6.4 Projection profile
 
-The exact profile record is bound after $`N_{\rm sig}^\star`$ and before the group descriptors. Its serialization is the ASCII label aerie/falcon/v1/projection/profile, then the norm fields in order: LE64(4), four LE64(43) prefix widths, LE64(156), five LE64 radices, U8(0) for the ternary distribution, U8(0) for source order $`S_1\Vert e`$, and LE128($`\Theta`$). Next encode the residual fields: three LE64(31) widths, three LE64 radices, U8(1)||U8(12) for the uniform-symmetric distribution and LE64(12,289) for the modulus. The parameter-set byte, $`n`$, $`N_{\rm sig}`$, and $`N_{\rm sig}^\star`$ are bound by the enclosing transcript context.
+The exact profile record is bound after $`N_{\rm sig}^\star`$ and before the group descriptors. Its serialization is the ASCII label aerie/falcon/v2/projection/profile, then the norm fields in order: LE64(4), four LE64(43) prefix widths, LE64(156), five LE64 radices, U8(0) for the ternary distribution, U8(0) for source order $`S_1\Vert e`$, and LE128($`\Theta`$). Next encode the residual fields: three LE64(31) widths, three LE64 radices, U8(1)||U8(12) for the uniform-symmetric distribution and LE64(12,289) for the modulus. The parameter-set byte, $`n`$, $`N_{\rm sig}`$, and $`N_{\rm sig}^\star`$ are bound by the enclosing transcript context.
 
 | Parameter set | Norm radices | Residual radices | Norm cap $`\Theta`$ |
 | --- | --- | --- | ---: |
@@ -867,10 +878,10 @@ The event-header and field-work nonce encoding below is normative for the Aerie 
 
 The backend is Spongefish `ef9741346a150039427d9e0c02d6b2d73e93ec81`
 `Blake2b512`, the pinned Akita default. Backend substitution, including Keccak,
-is not a v1 option. Initialize the PIOP with `DomainSeparator::new(tag)`,
-`.session(B("aerie/falcon/v1"))`, `.instance(B(instance_digest))`, then
+is not a supported option. Initialize the PIOP with `DomainSeparator::new(tag)`,
+`.session(B("aerie/falcon/v2"))`, `.instance(B(instance_digest))`, then
 `to_prover(Blake2b512::default())` or the corresponding verifier constructor.
-Here `tag` is ASCII `aerie/falcon/v1/piop/blake2b` zero-padded to 64 bytes;
+Here `tag` is ASCII `aerie/falcon/v2/piop/blake2b` zero-padded to 64 bytes;
 `B` denotes an encoding wrapper, not a second serialization by Spongefish.
 Prover and verifier use separate native states and the same public duplex
 operations. Private prover randomness never enters this public state.
@@ -947,12 +958,12 @@ one unground kind-2 event consuming exactly 32 bytes.
 
 #### Initial instance and identities
 
-Let `H(label,x) = SHAKE256(B(ASCII(label)) || B(x), 32)`. These hashes are
+Let `H(label,x) = cSHAKE256(B(ASCII(label)) || B(x), 256, "", "aerie/falcon/v2/instance")`, with output length in bits. These hashes are
 public-input computations, not extra verifier challenges. The following
 canonical instance record is computed by both parties before initialization:
 
 ```
-LE16(1) || U8(parameter_set) || LE32(layout) || LE32(n)
+LE16(2) || U8(parameter_set) || LE32(layout) || LE32(n)
 || LE64(N_sig) || LE64(N_sig_star) || U8(salt_mode)
 || public_records_digest
 || projection_profile || group_descriptors
@@ -962,8 +973,8 @@ LE16(1) || U8(parameter_set) || LE32(layout) || LE32(n)
 The layout is 5 or 6 for Falcon-512 or Falcon-1024. The salt-mode byte is 0
 for per-record and 1 for common-salt. The 32-byte public-record digest uses
 Section 2.3, including customization
-`aerie/falcon/v1/public-records-binding/common-salt` in common-salt mode and
-`aerie/falcon/v1/public-records-binding` otherwise. Both modes hash the full
+`aerie/falcon/v2/public-records-binding/common-salt` in common-salt mode and
+`aerie/falcon/v2/public-records-binding` otherwise. Both modes hash the full
 expanded ordered records; the mode byte is bound in addition to this digest.
 
 The ordered public records are the Fiat-Shamir statement. The verifier derives
@@ -982,7 +993,7 @@ The profile is the 198-byte record in Section 6.4. Each group descriptor is
 11 bytes. In order these are `(0,1,n*N*,0)`, `(1,1,4*N*,0)`,
 `(2,4,n*N*,1)`, `(3,3,N*,1)`, where family 0 is width 14 and family 1 is width 4.
 The complete instance record is therefore 398 bytes; its digest is
-`H("aerie/falcon/v1/instance", record)`. All identities below are 32 bytes.
+`H("aerie/falcon/v2/instance", record)`. All identities below are 32 bytes.
 
 | Byte range | Field |
 | --- | --- |
@@ -1008,7 +1019,7 @@ configured for a 32-byte output (not truncation of Blake2b-512):
   This identifies the deterministic matrix stream. The selected profiles and
   expanded schedule identify its dimensions and uses. Local matrix caches,
   provisioned capacity, and pointer identity are not setup identity. Only
-  this transparent setup derivation is admitted by v1.
+  this transparent setup derivation is admitted by this protocol.
 - `catalog_id = catalog.catalog_digest()`, the hash of ASCII
   `AKITA-TRUSTED-SCHEDULE-CATALOG-V1 || B(family_name) || policy_digest ||
   LE64(row_count) || row_digest[0] || ... || row_digest[row_count-1]`, in the
@@ -1025,7 +1036,7 @@ configured for a 32-byte output (not truncation of Blake2b-512):
 These identity functions were introduced at Akita revision
 `515a21668bd2fb7f8e3b0a41c325b7c253b87aed` and are carried at the current
 pin `e023b6a46143f7b23199ccecb2684192baf7b640`; their encodings above define
-Aerie v1. Step E provides exact-cardinality field-site pricing and the three
+Aerie. Step E provides exact-cardinality field-site pricing and the three
 public identity functions. The setup seed serialization tag is `U8(1)`, not
 the field-modulus tag. The verifier derives the selected schedule and its
 grinding allocation from trusted public inputs before initializing the PIOP.
@@ -1043,28 +1054,28 @@ $`m=(3,8,12)`$ or $`(4,9,12)`$ be the stage combiner widths.
 
 | Order | Site | Operation and canonical payload | Payload or decoded challenge bytes |
 | ---: | --- | --- | ---: |
-| 0 | `aerie/falcon/v1/instance` | A, full instance record, one byte-string atom | 398 |
-| 1 | `aerie/falcon/v1/commit/s1` | A, 16 canonical base-field coefficients | 128 |
-| 2 | `aerie/falcon/v1/commit/slack` | A, 16 canonical base-field coefficients | 128 |
-| 3 | `aerie/falcon/v1/commit/s2-sources` | A, 16 canonical base-field coefficients | 128 |
-| 4 | `aerie/falcon/v1/commit/budget` | A, 16 canonical base-field coefficients | 128 |
-| 5 | `aerie/falcon/v1/projection/seed` | C, one 32-byte seed, no nonce | 32 |
-| 6 | `aerie/falcon/v1/projection/output` | A, one canonical Rice section, including its two parameters and padding | $`2+\lceil(L(k_y)+L(k_z))/8\rceil`$ |
-| 7 | `aerie/falcon/v1/mu` | C, all eight independent extension coordinates | 128 |
-| 8 | `aerie/falcon/v1/tau` | C, all $`d`$ coordinates, coefficient bits then signature bits | $`16d`$ |
-| 9 | `aerie/falcon/v1/stage1/gamma` | C, independent weights for $`a_1,a_2,[u_2]`$, projection link | $`16m_1`$ |
-| 10 | `aerie/falcon/v1/stage1/round/t/message` | A, $`(g_0,g_2,g_3)`$; repeat for $`t=0,\ldots,d-1`$ | 48 |
-| 11 | `aerie/falcon/v1/stage1/round/t/challenge` | C, $`r^{(1)}_t`$ immediately after that round's message | 16 |
-| 12 | `aerie/falcon/v1/stage1/terminal` | A, $`2b`$ basis claims then three projection claims | $`16(2b+3)`$ |
-| 13 | `aerie/falcon/v1/stage2/gamma` | C, the $`m_2`$ independent weights in the order below | $`16m_2`$ |
-| 14 | `aerie/falcon/v1/stage2/round/t/message` | A, $`(q_1,q_2,q_3,q_4)`$; repeat for $`t=0,\ldots,d-1`$ | 64 |
-| 15 | `aerie/falcon/v1/stage2/round/t/challenge` | C, $`r^{(2)}_t`$ immediately after that round's message | 16 |
-| 16 | `aerie/falcon/v1/stage2/terminal` | A, six folded digits in Section 10.3 order | 96 |
-| 17 | `aerie/falcon/v1/stage3/gamma` | C, twelve independent weights in the order below | 192 |
-| 18 | `aerie/falcon/v1/stage3/round/t/message` | A, $`(g_0,g_2,g_3)`$; repeat for $`t=0,\ldots,d-1`$ | 48 |
-| 19 | `aerie/falcon/v1/stage3/round/t/challenge` | C, $`r^{(3)}_t`$ immediately after that round's message | 16 |
-| 20 | `aerie/falcon/v1/stage3/terminal` | A, the nine evaluations of (7.16) | 144 |
-| 21 | `aerie/falcon/v1/pcs/session` | kind 4, state export after all terminal checks | 32 squeezed bytes |
+| 0 | `aerie/falcon/v2/instance` | A, full instance record, one byte-string atom | 398 |
+| 1 | `aerie/falcon/v2/commit/s1` | A, 16 canonical base-field coefficients | 128 |
+| 2 | `aerie/falcon/v2/commit/slack` | A, 16 canonical base-field coefficients | 128 |
+| 3 | `aerie/falcon/v2/commit/s2-sources` | A, 16 canonical base-field coefficients | 128 |
+| 4 | `aerie/falcon/v2/commit/budget` | A, 16 canonical base-field coefficients | 128 |
+| 5 | `aerie/falcon/v2/projection/seed` | C, one 32-byte seed, no nonce | 32 |
+| 6 | `aerie/falcon/v2/projection/output` | A, one canonical Rice section, including its two parameters and padding | $`2+\lceil(L(k_y)+L(k_z))/8\rceil`$ |
+| 7 | `aerie/falcon/v2/mu` | C, all eight independent extension coordinates | 128 |
+| 8 | `aerie/falcon/v2/tau` | C, all $`d`$ coordinates, coefficient bits then signature bits | $`16d`$ |
+| 9 | `aerie/falcon/v2/stage1/gamma` | C, independent weights for $`a_1,a_2,[u_2]`$, projection link | $`16m_1`$ |
+| 10 | `aerie/falcon/v2/stage1/round/t/message` | A, $`(g_0,g_2,g_3)`$; repeat for $`t=0,\ldots,d-1`$ | 48 |
+| 11 | `aerie/falcon/v2/stage1/round/t/challenge` | C, $`r^{(1)}_t`$ immediately after that round's message | 16 |
+| 12 | `aerie/falcon/v2/stage1/terminal` | A, $`2b`$ basis claims then three projection claims | $`16(2b+3)`$ |
+| 13 | `aerie/falcon/v2/stage2/gamma` | C, the $`m_2`$ independent weights in the order below | $`16m_2`$ |
+| 14 | `aerie/falcon/v2/stage2/round/t/message` | A, $`(q_1,q_2,q_3,q_4)`$; repeat for $`t=0,\ldots,d-1`$ | 64 |
+| 15 | `aerie/falcon/v2/stage2/round/t/challenge` | C, $`r^{(2)}_t`$ immediately after that round's message | 16 |
+| 16 | `aerie/falcon/v2/stage2/terminal` | A, six folded digits in Section 10.3 order | 96 |
+| 17 | `aerie/falcon/v2/stage3/gamma` | C, twelve independent weights in the order below | 192 |
+| 18 | `aerie/falcon/v2/stage3/round/t/message` | A, $`(g_0,g_2,g_3)`$; repeat for $`t=0,\ldots,d-1`$ | 48 |
+| 19 | `aerie/falcon/v2/stage3/round/t/challenge` | C, $`r^{(3)}_t`$ immediately after that round's message | 16 |
+| 20 | `aerie/falcon/v2/stage3/terminal` | A, the nine evaluations of (7.16) | 144 |
+| 21 | `aerie/falcon/v2/pcs/session` | kind 4, state export after all terminal checks | 32 squeezed bytes |
 
 In the indexed sites, replace the literal `t` by its canonical decimal index.
 A round-message/challenge pair is repeated before proceeding to the next row
@@ -1082,13 +1093,13 @@ claims, and padding PCS points with zeros are deterministic operations;
 they create no challenge or proof message.
 
 To export the session, clone the PIOP duplex state after event 20, absorb the
-kind-4 header for `aerie/falcon/v1/pcs/session` with count 1 and length 32,
+kind-4 header for `aerie/falcon/v2/pcs/session` with count 1 and length 32,
 and squeeze exactly 32 bytes. Those bytes, without hex encoding or another
 length prefix, are the PCS API's `session` argument. Neither the clone nor
 the digest is transported. This is a domain-separated digest of the full
 PIOP state, including the instance, commitments, all accepted work nonces,
 all challenge/rejection history, Rice bytes, round messages, and terminal
-claims. The fixed string `aerie/falcon/v1` is not a valid PCS session.
+claims. The fixed string `aerie/falcon/v2` is not a valid PCS session.
 Pass the exported bytes to Akita's native PCS stream, which binds its own
 complete opening statement. PCS operations are outside this ordered PIOP
 event registry.
@@ -1399,7 +1410,7 @@ allocation exactly.
 
 ### 10.2 Header and record transport
 
-The transcript root is aerie/falcon/v1. The proof frame begins with 27 bytes: a 16-byte magic, wire version LE16 equal to 1, parameter-set byte 9 or 10, and $`N_{\rm sig}`$ as LE64. The per-record PCS frame magic is aerie/falcon/v1p. The common-salt PCS frame magic is aerie/falcon/v1c. A decoder checks the magic, version, and parameter-set byte in that order, then rejects $`N_{\rm sig}^\star\gt 2^{16}`$. Public keys and messages are statement inputs. Immediately after the header, the per-record transport frame contains the $`N_{\rm sig}`$ live 40-byte salts in record order, with no per-record length fields. In common-salt mode, this frame is exactly one 40-byte salt. The decoder MUST expand it to $`N_{\rm sig}`$ copies before statement binding and target derivation. A common-salt encoder MUST reject empty or unequal salt vectors and vectors whose length differs from $`N_{\rm sig}`$. The magic selects the mode without a length heuristic, and the verifier MUST use that mode's public-record customization from Section 2.3. Re-encoding a proof body under the opposite mode MUST fail verification, even when all expanded salts are equal. All subsequent fields use the same grammar in both modes. The canonical public keys and raw messages remain statement inputs; private witness bytes are not transported.
+The transcript root is aerie/falcon/v2. The proof frame begins with 27 bytes: a 16-byte magic, wire version LE16 equal to 1, parameter-set byte 9 or 10, and $`N_{\rm sig}`$ as LE64. The per-record PCS frame magic is aerie/falcon/v2p. The common-salt PCS frame magic is aerie/falcon/v2c. A decoder checks the magic, version, and parameter-set byte in that order, then rejects $`N_{\rm sig}^\star\gt 2^{16}`$. Public keys and messages are statement inputs. Immediately after the header, the per-record transport frame contains the $`N_{\rm sig}`$ live 40-byte salts in record order, with no per-record length fields. In common-salt mode, this frame is exactly one 40-byte salt. The decoder MUST expand it to $`N_{\rm sig}`$ copies before statement binding and target derivation. A common-salt encoder MUST reject empty or unequal salt vectors and vectors whose length differs from $`N_{\rm sig}`$. The magic selects the mode without a length heuristic, and the verifier MUST use that mode's public-record customization from Section 2.3. Re-encoding a proof body under the opposite mode MUST fail verification, even when all expanded salts are equal. All subsequent fields use the same grammar in both modes. The canonical public keys and raw messages remain statement inputs; private witness bytes are not transported.
 
 The codec derives $`N_{\rm sig}^\star`$, the profile, group shapes, and projection profile from the parameter set and $`N_{\rm sig}`$. It rejects missing, trailing, malformed, or noncanonical data. The final Akita section is length-prefixed as LE64 length followed by the canonical Akita argument string. Its length MUST be nonzero, at most $`2^{20}`$, and equal to the number of remaining frame bytes.
 
@@ -1489,11 +1500,11 @@ q_0=v-\alpha(q_1+q_2+q_3+q_4).
 ```
 Send $`(q_1,q_2,q_3,q_4)`$. After reconstructing $`q_0`$, sample $`t`$ and update the normalized claim to $`q(t)`$. This consumes the equality coordinate without division, including when $`\alpha`$ is zero or one. After the final round, compare the claim with the batched range-polynomial values from Section 7.3, without another equality factor.
 
-The catalog descriptor fixes $`[u_0,u_1,u_2]`$ as the final Akita group, after the three precommitted groups in canonical order. No plane-coordinate challenges are sampled for PCS group claims. This is the first frozen wire version 1; old development encodings require regeneration.
+The catalog descriptor fixes $`[u_0,u_1,u_2]`$ as the final Akita group, after the three precommitted groups in canonical order. No plane-coordinate challenges are sampled for PCS group claims. This is the first frozen wire version 2; old development encodings require regeneration.
 
 ### 10.4 Canonical Rice projection section
 
-The output section is absorbed byte-for-byte at `aerie/falcon/v1/projection/output`, after canonical decoding and both projection checks and before `mu` work. The two parameter bytes and zero padding are included. It carries no work nonce of its own. Decoded residues are used in the PIOP equations but are not absorbed a second time.
+The output section is absorbed byte-for-byte at `aerie/falcon/v2/projection/output`, after canonical decoding and both projection checks and before `mu` work. The two parameter bytes and zero padding are included. It carries no work nonce of its own. Decoded residues are used in the PIOP equations but are not absorbed a second time.
 
 The output section consists of one-byte $`k_y`$, one-byte $`k_z`$, and one bit stream. The stream packs bits least significant first within each byte and has zero padding to the next byte. It contains the 156 norm outputs followed by the 31 residual outputs.
 
@@ -1605,7 +1616,7 @@ signed D256 packing family, whose raw support $`C_{256}`$ exceeds $`2^{129}`$ (S
 catalog identity, row identity and setup-seed digest encodings are unchanged, as are the D128 and D64
 operator-norm certificates. The other PRs in range are LaBinius, field and prover additions that Aerie
 does not select. Step F
-implements the v1 PIOP transcript, derives the 398-byte instance record before
+implements the PIOP transcript, derives the 398-byte instance record before
 initialization, uses canonical Rice projection bytes and exact extension
 sampling, and exports the PIOP session digest to Akita's native PCS stream.
 Akita's PCS stream and grammar are used as supplied by the pinned revision.
@@ -1628,7 +1639,7 @@ $`g=4`$.
 
 ## 13. Acceptance criteria
 
-The implementation conforms to frozen version 1 only when all of the following hold:
+The implementation conforms to version 2 only when all of the following hold:
 
 - The prover and verifier use the four same-shape Akita groups and one opening point per group.
 - The groups have widths 14, 14, 4, and 4; the final Akita group uses the width-4 family.

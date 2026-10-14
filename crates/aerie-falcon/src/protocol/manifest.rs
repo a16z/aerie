@@ -261,7 +261,7 @@ mod tests {
         let manifest = target_manifest();
         let bytes = manifest.binding_bytes();
         let mut expected = Vec::new();
-        expected.extend_from_slice(&1_u16.to_le_bytes());
+        expected.extend_from_slice(&2_u16.to_le_bytes());
         expected.push(9);
         expected.extend_from_slice(&5_u32.to_le_bytes());
         expected.extend_from_slice(&512_u32.to_le_bytes());
@@ -325,7 +325,7 @@ mod tests {
         }
         assert_eq!(target_manifest().binding_bytes(), base);
         let wide = wide_manifest(8).binding_bytes();
-        assert_eq!(&wide[..2], &1_u16.to_le_bytes());
+        assert_eq!(&wide[..2], &2_u16.to_le_bytes());
         assert_eq!(wide[2], 10);
         assert_eq!(&wide[3..7], &6_u32.to_le_bytes());
         assert_eq!(&wide[7..11], &1_024_u32.to_le_bytes());

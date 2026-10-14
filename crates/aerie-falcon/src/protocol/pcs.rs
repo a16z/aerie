@@ -76,7 +76,7 @@ struct PiopOutput {
     stage3_ns: u128,
 }
 
-/// Complete wire data of the version 1 protocol with real commitments.
+/// Complete wire data of the version 2 protocol with real commitments.
 #[derive(Clone, Debug)]
 pub struct AggregateProof {
     /// The commitment payloads in canonical manifest order.
@@ -717,7 +717,7 @@ pub(crate) fn commitment_coefficient_counts_of(
     Ok(coefficient_counts)
 }
 
-/// Prove the complete version 1 protocol with real commitments, building
+/// Prove the complete version 2 protocol with real commitments, building
 /// a one-off setup for the witness's parameter set and record count.
 #[cfg(any(test, feature = "bench-internals", feature = "adversarial-internals"))]
 pub fn prove(
@@ -941,7 +941,7 @@ fn prove_prepared_impl(
         ProtocolTranscript::new_with_test_record(&manifest, &instance, &registry_instance)?;
     #[cfg(test)]
     if setup.site_mutation {
-        bound.override_next_site_for_test(b"aerie/falcon/v1/commit/changed-s1");
+        bound.override_next_site_for_test(b"aerie/falcon/v2/commit/changed-s1");
     }
 
     let mut commit_group_ns = [0_u128; GROUP_COUNT];
@@ -1218,7 +1218,7 @@ fn prove_prepared_impl(
     ))
 }
 
-/// Verify the complete version 1 protocol from public inputs and wire data.
+/// Verify the complete version 2 protocol from public inputs and wire data.
 ///
 /// Every group profile and the schedule selection are re-derived from the
 /// statement shape and the generated catalogs; only commitment payloads

@@ -29,6 +29,6 @@ mod tests {
 
     #[test]
     fn common_salt_seed_roundtrips_through_the_fuzz_oracle() {
-        check_wire_pcs_proof(include_bytes!("../seeds/wire_pcs_proof/falcon512-v1c"));
+        check_wire_pcs_proof(include_bytes!("../seeds/wire_pcs_proof/falcon512-v2c"));
     }
 }

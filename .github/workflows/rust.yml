@@ -314,6 +314,8 @@ jobs:
               continue
             fi
             AERIE_KECCAK_BACKEND="$backend" cargo test --release --locked \
+              -p aerie-keccak customized_
+            AERIE_KECCAK_BACKEND="$backend" cargo test --release --locked \
               -p aerie-falcon public_records_binding::tests
             AERIE_KECCAK_BACKEND="$backend" cargo test --release --locked \
               -p aerie-falcon streamed_target_matches_expanded_across_chunks_and_worker_counts

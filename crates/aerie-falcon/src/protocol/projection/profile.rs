@@ -44,7 +44,7 @@ pub const NORM_CAP_FALCON_512: u128 = 5_092_300_183_991_442_303_232;
 pub const NORM_CAP_FALCON_1024: u128 = 10_513_136_047_130_310_946_696;
 
 /// Label opening [`ProjectionProfile::binding_bytes`].
-pub const PROFILE_BINDING_LABEL: &[u8] = b"aerie/falcon/v1/projection/profile";
+pub const PROFILE_BINDING_LABEL: &[u8] = b"aerie/falcon/v2/projection/profile";
 
 /// Entry distribution of one leg's cores.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

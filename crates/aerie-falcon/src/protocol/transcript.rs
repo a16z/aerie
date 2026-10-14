@@ -1,4 +1,4 @@
-//! Native Spongefish transcript and the current version-1 PIOP event registry.
+//! Native Spongefish transcript and the current version-2 PIOP event registry.
 //!
 //! Version 1 freezes at the first public release. Until then, this registry may
 //! change without a wire-version bump.
@@ -24,30 +24,30 @@ use super::{
 };
 use crate::substrate::{BaseField, OpeningField};
 
-const INSTANCE_LABEL: &str = "aerie/falcon/v1/instance";
-const PROJECTION_SEED_SITE: &str = "aerie/falcon/v1/projection/seed";
-const PCS_SESSION_SITE: &str = "aerie/falcon/v1/pcs/session";
+const INSTANCE_LABEL: &str = "aerie/falcon/v2/instance";
+const PROJECTION_SEED_SITE: &str = "aerie/falcon/v2/projection/seed";
+const PCS_SESSION_SITE: &str = "aerie/falcon/v2/pcs/session";
 const PROOF_KIND: u8 = 1;
 const PUBLIC_KIND: u8 = 0;
 const CHALLENGE_KIND: u8 = 2;
 const WORK_KIND: u8 = 3;
 const EXPORT_KIND: u8 = 4;
 
-const PROJECTION_OUTPUT_SITE: &str = "aerie/falcon/v1/projection/output";
-const MU_SITE: &str = "aerie/falcon/v1/mu";
-const TAU_SITE: &str = "aerie/falcon/v1/tau";
-const STAGE1_GAMMA_SITE: &str = "aerie/falcon/v1/stage1/gamma";
-const STAGE1_TERMINAL_SITE: &str = "aerie/falcon/v1/stage1/terminal";
-const STAGE2_GAMMA_SITE: &str = "aerie/falcon/v1/stage2/gamma";
-const STAGE2_TERMINAL_SITE: &str = "aerie/falcon/v1/stage2/terminal";
-const STAGE3_GAMMA_SITE: &str = "aerie/falcon/v1/stage3/gamma";
-const STAGE3_TERMINAL_SITE: &str = "aerie/falcon/v1/stage3/terminal";
+const PROJECTION_OUTPUT_SITE: &str = "aerie/falcon/v2/projection/output";
+const MU_SITE: &str = "aerie/falcon/v2/mu";
+const TAU_SITE: &str = "aerie/falcon/v2/tau";
+const STAGE1_GAMMA_SITE: &str = "aerie/falcon/v2/stage1/gamma";
+const STAGE1_TERMINAL_SITE: &str = "aerie/falcon/v2/stage1/terminal";
+const STAGE2_GAMMA_SITE: &str = "aerie/falcon/v2/stage2/gamma";
+const STAGE2_TERMINAL_SITE: &str = "aerie/falcon/v2/stage2/terminal";
+const STAGE3_GAMMA_SITE: &str = "aerie/falcon/v2/stage3/gamma";
+const STAGE3_TERMINAL_SITE: &str = "aerie/falcon/v2/stage3/terminal";
 
 /// Spongefish protocol tag for Aerie's PIOP stream, zero-padded to 64 bytes.
 pub const PIOP_PROTOCOL_TAG: [u8; 64] = protocol_tag();
 
 const fn protocol_tag() -> [u8; 64] {
-    let source = b"aerie/falcon/v1/piop/blake2b";
+    let source = b"aerie/falcon/v2/piop/blake2b";
     let mut tag = [0; 64];
     let mut index = 0;
     while index < source.len() {
@@ -172,10 +172,10 @@ impl EventCursor {
         let mut events = Vec::with_capacity(21 + 6 * rounds);
         push_absorb(&mut events, INSTANCE_LABEL, PUBLIC_KIND, 1, INSTANCE_BYTES);
         for site in [
-            "aerie/falcon/v1/commit/s1",
-            "aerie/falcon/v1/commit/slack",
-            "aerie/falcon/v1/commit/s2-sources",
-            "aerie/falcon/v1/commit/budget",
+            "aerie/falcon/v2/commit/s1",
+            "aerie/falcon/v2/commit/slack",
+            "aerie/falcon/v2/commit/s2-sources",
+            "aerie/falcon/v2/commit/budget",
         ] {
             push_absorb(&mut events, site, PROOF_KIND, 16, 128);
         }
@@ -316,8 +316,8 @@ fn push_round(
     bytes: usize,
     difficulty: u32,
 ) {
-    let message_site = format!("aerie/falcon/v1/{stage}/round/{round}/message");
-    let challenge_site = format!("aerie/falcon/v1/{stage}/round/{round}/challenge");
+    let message_site = format!("aerie/falcon/v2/{stage}/round/{round}/message");
+    let challenge_site = format!("aerie/falcon/v2/{stage}/round/{round}/challenge");
     push_absorb(events, &message_site, PROOF_KIND, count, bytes);
     push_challenge(events, &challenge_site, 1, 16, difficulty);
 }
@@ -815,10 +815,10 @@ impl VerifierProtocolTranscript {
 
 fn commitment_site(role: GroupRole) -> &'static str {
     match role {
-        GroupRole::S1 => "aerie/falcon/v1/commit/s1",
-        GroupRole::Slack => "aerie/falcon/v1/commit/slack",
-        GroupRole::S2Sources => "aerie/falcon/v1/commit/s2-sources",
-        GroupRole::Budget => "aerie/falcon/v1/commit/budget",
+        GroupRole::S1 => "aerie/falcon/v2/commit/s1",
+        GroupRole::Slack => "aerie/falcon/v2/commit/slack",
+        GroupRole::S2Sources => "aerie/falcon/v2/commit/s2-sources",
+        GroupRole::Budget => "aerie/falcon/v2/commit/budget",
     }
 }
 
@@ -1034,13 +1034,13 @@ mod tests {
         for stage_round in 0..rounds {
             transcript
                 .absorb_extensions(
-                    &format!("aerie/falcon/v1/stage1/round/{stage_round}/message"),
+                    &format!("aerie/falcon/v2/stage1/round/{stage_round}/message"),
                     &[OpeningField::from_u64(0); 3],
                 )
                 .unwrap();
             transcript
                 .challenge_extensions(
-                    &format!("aerie/falcon/v1/stage1/round/{stage_round}/challenge"),
+                    &format!("aerie/falcon/v2/stage1/round/{stage_round}/challenge"),
                     1,
                 )
                 .unwrap();
@@ -1062,13 +1062,13 @@ mod tests {
         for stage_round in 0..rounds {
             transcript
                 .absorb_extensions(
-                    &format!("aerie/falcon/v1/stage2/round/{stage_round}/message"),
+                    &format!("aerie/falcon/v2/stage2/round/{stage_round}/message"),
                     &[OpeningField::from_u64(0); 4],
                 )
                 .unwrap();
             transcript
                 .challenge_extensions(
-                    &format!("aerie/falcon/v1/stage2/round/{stage_round}/challenge"),
+                    &format!("aerie/falcon/v2/stage2/round/{stage_round}/challenge"),
                     1,
                 )
                 .unwrap();
@@ -1082,13 +1082,13 @@ mod tests {
         for stage_round in 0..rounds {
             transcript
                 .absorb_extensions(
-                    &format!("aerie/falcon/v1/stage3/round/{stage_round}/message"),
+                    &format!("aerie/falcon/v2/stage3/round/{stage_round}/message"),
                     &[OpeningField::from_u64(0); 3],
                 )
                 .unwrap();
             transcript
                 .challenge_extensions(
-                    &format!("aerie/falcon/v1/stage3/round/{stage_round}/challenge"),
+                    &format!("aerie/falcon/v2/stage3/round/{stage_round}/challenge"),
                     1,
                 )
                 .unwrap();
@@ -1263,10 +1263,10 @@ mod tests {
             assert_eq!(cursor.events[0].site, INSTANCE_LABEL);
             let mut expected = vec![(INSTANCE_LABEL.to_owned(), 0, 1, INSTANCE_BYTES)];
             for site in [
-                "aerie/falcon/v1/commit/s1",
-                "aerie/falcon/v1/commit/slack",
-                "aerie/falcon/v1/commit/s2-sources",
-                "aerie/falcon/v1/commit/budget",
+                "aerie/falcon/v2/commit/s1",
+                "aerie/falcon/v2/commit/slack",
+                "aerie/falcon/v2/commit/s2-sources",
+                "aerie/falcon/v2/commit/budget",
             ] {
                 expected.push((site.to_owned(), 1, 16, 128));
             }
@@ -1358,14 +1358,12 @@ mod tests {
             verifier.ensure_complete().unwrap();
             let golden = match degree {
                 FalconDegree::Falcon512 => [
-                    0x9c, 0xda, 0x82, 0x72, 0x8a, 0x05, 0xc4, 0x0b, 0xe8, 0x24, 0xaf, 0xf4, 0x51,
-                    0xd1, 0x29, 0xab, 0x8b, 0x6c, 0x40, 0x11, 0x58, 0x6f, 0xb9, 0x3f, 0x0d, 0x21,
-                    0x7e, 0x08, 0xe2, 0x24, 0xcd, 0xd6,
+                    65, 235, 118, 240, 220, 229, 11, 237, 59, 114, 13, 75, 109, 211, 236, 11, 60,
+                    253, 53, 233, 80, 112, 128, 133, 133, 128, 176, 87, 166, 234, 148, 235,
                 ],
                 FalconDegree::Falcon1024 => [
-                    0xed, 0x1c, 0x3b, 0x99, 0xaa, 0xbd, 0xa9, 0x77, 0xe0, 0xf3, 0x57, 0xd2, 0x0d,
-                    0x4d, 0xad, 0xfd, 0xd3, 0x8d, 0xe1, 0x01, 0xcb, 0x9c, 0x79, 0xd4, 0xb5, 0xbe,
-                    0xc1, 0x9c, 0x44, 0x0f, 0x89, 0x89,
+                    37, 26, 139, 58, 32, 250, 100, 207, 160, 132, 99, 14, 147, 37, 171, 19, 42,
+                    167, 24, 36, 50, 236, 255, 147, 70, 250, 125, 136, 175, 138, 86, 25,
                 ],
             };
             assert_eq!(prover_session, golden);
@@ -1381,13 +1379,13 @@ mod tests {
     ) {
         for round in 0..rounds {
             expected.push((
-                format!("aerie/falcon/v1/{stage}/round/{round}/message"),
+                format!("aerie/falcon/v2/{stage}/round/{round}/message"),
                 1,
                 count,
                 bytes,
             ));
             expected.push((
-                format!("aerie/falcon/v1/{stage}/round/{round}/challenge"),
+                format!("aerie/falcon/v2/{stage}/round/{round}/challenge"),
                 2,
                 1,
                 16,
