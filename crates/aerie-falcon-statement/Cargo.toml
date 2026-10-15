@@ -1,0 +1,30 @@
+[package]
+name = "aerie-falcon-statement"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Aerie defines byte-bound Falcon public statements and canonical ingestion."
+
+[features]
+default = []
+parallel = ["aerie-falcon-native/parallel"]
+
+[dependencies]
+aerie-falcon-native = { workspace = true, default-features = false }
+tracing = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"

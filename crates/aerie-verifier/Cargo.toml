@@ -1,0 +1,22 @@
+[package]
+name = "aerie-verifier"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Verification API for Aerie Falcon signature aggregation."
+
+[features]
+default = []
+parallel = ["aerie-falcon/parallel"]
+internals = ["aerie-falcon/internals"]
+
+[dependencies]
+aerie-falcon = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"

@@ -1,0 +1,47 @@
+# Standalone fuzz sub-workspace (same pattern as jolt's crate fuzzers):
+# the empty [workspace] table keeps it out of the root workspace so the
+# nightly-only libfuzzer dependency never enters the main build graph.
+[workspace]
+
+[package]
+name = "aerie-falcon-native-fuzz"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+authors = ["a16z and LayerZero Labs"]
+repository = "https://github.com/a16z/aerie"
+homepage = "https://github.com/a16z/aerie"
+publish = false
+description = "Aerie fuzzes canonical Falcon public key and signature parsing."
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+aerie-falcon-native = { path = ".." }
+
+[[bin]]
+name = "pubkey_parse"
+path = "fuzz_targets/pubkey_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "signature_parse"
+path = "fuzz_targets/signature_parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "pubkey_parse_1024"
+path = "fuzz_targets/pubkey_parse_1024.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "signature_parse_1024"
+path = "fuzz_targets/signature_parse_1024.rs"
+test = false
+doc = false

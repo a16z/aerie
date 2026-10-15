@@ -1,0 +1,76 @@
+name: Spec checks
+
+# The numerical checks the manuscript and the ledgers rely on. They run on
+# every pull request (no path filter, so the check can be required) and take
+# well under a minute; a broken spec derivation must not merge silently.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  spec-scripts:
+    name: Spec arithmetic
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Standard library only; each script exits non-zero on any failed check.
+      # Clear structured projections:
+      # verifies the Laplace-pair supremum (Lemma C) with outward-rounded
+      # rational enclosures, recomputes the exact norm-leg certificate for
+      # n = 512 and n = 1024, and compares it with the pinned JSON report.
+      - name: Clear-projection certificate
+        run: python3 specs/scripts/falcon_projection_certificate.py --check
+      # Lean formalization of the projection theorem (certified-projections):
+      # compares the constants of the Rust verifier with the pinned report,
+      # and the Lean file that checks the report's constants against the Lean
+      # definitions with its recorded SHA-256.
+      - name: Projection constants and Lean link
+        run: python3 specs/scripts/falcon_projection_lean.py --check
+      # The composition ledgers charge the clear-projection PIOP, the
+      # certificate's projection term and the four-group PCS catalog terms.
+      # Size bounds of the Rice-coded projection output section
+      # (specs/falcon.md Section 10.4): any decodable input and any accepted
+      # proof at both parameter sets.
+      - name: Projection output wire bound
+        run: python3 specs/scripts/falcon_projection_wire_bound.py
+      - name: Falcon composition ledger
+        run: python3 specs/scripts/falcon_composition_ledger.py
+      - name: MSIS re-anchored certification audit
+        run: python3 specs/scripts/falcon_msis_audit.py
+      - name: Falcon-1024 parameter checks
+        run: python3 specs/scripts/falcon_1024_parameter_checks.py
+      - name: Falcon-1024 composition ledger
+        run: python3 specs/scripts/falcon_1024_composition_ledger.py
+      # Section 10.1 work allocation: recomputes every PIOP and PCS field site
+      # of the 29 admitted padded shapes from the native catalog and compares
+      # them exactly, root EvaluationBatch included, with the vendored paper
+      # evidence (SHA-256 pinned; a missing or changed file fails).
+      - name: Transcript grinding allocation
+        run: python3 specs/scripts/falcon_transcript_grinding.py --check
+      # Four-group catalog certification is recorded by the PCS audit report.
+
+  script-tests:
+    name: Repository script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Benchmark and timing script unit tests
+        run: python3 -m unittest discover -s scripts/tests -p "test_*.py"
+      - name: Serial normal dependency graph script is executable and well-formed
+        run: |
+          test -x scripts/check_serial_deps.sh
+          bash -n scripts/check_serial_deps.sh
+      - name: Verifier dependency scripts are executable and well-formed
+        run: |
+          test -x scripts/check_verifier_deps.sh
+          test -x scripts/check_verifier_consumer.sh
+          bash -n scripts/check_verifier_deps.sh scripts/check_verifier_consumer.sh

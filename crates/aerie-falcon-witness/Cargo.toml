@@ -1,0 +1,46 @@
+[package]
+name = "aerie-falcon-witness"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Aerie constructs validated Falcon witnesses and production proving inputs."
+
+[features]
+default = []
+test-fixtures = []
+honest-vectors = ["dep:fn-dsa"]
+parallel = [
+  "dep:rayon",
+  "aerie-falcon-native/parallel",
+  "aerie-falcon-statement/parallel",
+]
+
+[dependencies]
+aerie-falcon-native = { workspace = true, default-features = false }
+aerie-falcon-statement = { workspace = true, default-features = false }
+akita-algebra = { workspace = true }
+fn-dsa = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
+shake = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+fn-dsa = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+similar_names = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"

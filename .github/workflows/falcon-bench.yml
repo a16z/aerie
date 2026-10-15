@@ -1,0 +1,441 @@
+name: Falcon Benchmarks
+
+on:
+  pull_request:
+    branches: ["**"]
+    paths:
+      - ".github/workflows/falcon-bench*.yml"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      # Only the crates that feed the public-salt Falcon prover; the
+      # invariants harness does not change this benchmark's binary.
+      - "crates/aerie-bench/**"
+      - "crates/aerie-falcon/**"
+      - "crates/aerie-prover/**"
+      - "crates/aerie-verifier/**"
+      - "crates/aerie-keccak/**"
+      - "crates/aerie-simd/**"
+      - "crates/aerie-falcon-native/**"
+      - "crates/aerie-pcs-config/**"
+      - "crates/aerie-falcon-statement/**"
+      - "crates/aerie-falcon-witness/**"
+      - "scripts/falcon_bench_report.py"
+      - "scripts/benchmark_targets.py"
+      - "scripts/tests/test_benchmark_targets.py"
+      - "scripts/tests/test_falcon_bench_report.py"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+env:
+  AERIE_BENCH_RUNS: "5"
+  AERIE_BENCH_WARMUPS: "1"
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings -C target-cpu=x86-64-v3
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resolve:
+    name: Resolve benchmark revisions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      head_sha: ${{ steps.revisions.outputs.head_sha }}
+      base_sha: ${{ steps.revisions.outputs.base_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Validate benchmark reporter
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+
+      - name: Resolve head and merge base
+        id: revisions
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # The merge base comes from the compare API, so no job needs the
+          # full history.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            head_sha="${{ github.event.pull_request.head.sha }}"
+            base_tip="${{ github.event.pull_request.base.sha }}"
+            base_sha="$(gh api "repos/$GITHUB_REPOSITORY/compare/$base_tip...$head_sha" \
+              --jq '.merge_base_commit.sha')"
+          else
+            head_sha="$GITHUB_SHA"
+            base_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/$head_sha" \
+              --jq '.parents[0].sha')"
+          fi
+          if [ -z "$base_sha" ] || [ "$base_sha" = "$head_sha" ]; then
+            echo "Could not resolve a distinct base benchmark revision" >&2
+            exit 1
+          fi
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$base_sha" >> "$GITHUB_OUTPUT"
+          echo "Benchmarking head $head_sha against merge base $base_sha"
+
+  build:
+    name: Build ${{ matrix.side }} benchmark
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        side: [base, head]
+    env:
+      AERIE_BENCH_REVISION: ${{ matrix.side == 'head' && needs.resolve.outputs.head_sha || needs.resolve.outputs.base_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.AERIE_BENCH_REVISION }}
+
+      # Both sides resolve their target and features with the head's selector.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.head_sha }}
+          path: .head-selector
+          sparse-checkout: scripts
+
+      - uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
+        with:
+          cache: false
+
+      - name: Check benchmark schema
+        id: schema
+        shell: bash
+        env:
+          AERIE_BENCH_SIDE: ${{ matrix.side }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/falcon-bench-bin"
+          schema=
+          if cargo metadata --locked --no-deps --format-version=1 \
+              > "$RUNNER_TEMP/schema.metadata.json" &&
+              python3 .head-selector/scripts/benchmark_targets.py falcon \
+                --side "$AERIE_BENCH_SIDE" < "$RUNNER_TEMP/schema.metadata.json" \
+                > "$RUNNER_TEMP/schema.selection.tsv"; then
+            IFS=$'\t' read -r _ _ _ harness < "$RUNNER_TEMP/schema.selection.tsv"
+            schema="$(sed -nE 's/^const BENCHMARK_SCHEMA: u32 = ([0-9]+);$/\1/p' "$harness" 2>/dev/null || true)"
+          elif [ "$AERIE_BENCH_SIDE" = "head" ]; then
+            echo "benchmark target selection failed" >&2
+            exit 1
+          fi
+          expected_schema="$(python3 .head-selector/scripts/falcon_bench_report.py --print-schema)"
+          if ! [[ "$expected_schema" =~ ^[0-9]+$ ]]; then
+            echo "Head benchmark reporter must emit a numeric benchmark schema (detected ${expected_schema:-none})." >&2
+            exit 1
+          fi
+          echo "expected=$expected_schema" >> "$GITHUB_OUTPUT"
+          if [[ "$schema" =~ ^[0-9]+$ ]] && [ "$schema" = "$expected_schema" ]; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+          elif [ "$AERIE_BENCH_SIDE" = "base" ]; then
+            reason="No base comparison: base $AERIE_BENCH_REVISION does not emit benchmark schema $expected_schema (detected ${schema:-none})."
+            echo "$reason" | tee "$RUNNER_TEMP/falcon-bench-bin/comparison-skipped.txt"
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Head benchmark must emit benchmark schema $expected_schema (detected ${schema:-none})." >&2
+            exit 1
+          fi
+
+      - name: Compute binary cache key
+        if: steps.schema.outputs.supported == 'true'
+        id: key
+        shell: bash
+        run: |
+          set -euo pipefail
+          settings="$(
+            {
+              rustc -vV
+              echo "RUSTFLAGS=$RUSTFLAGS"
+              cat .head-selector/scripts/benchmark_targets.py
+            } | sha256sum | cut -c1-16
+          )"
+          echo "binary=falcon-bench-bin-schema${{ steps.schema.outputs.expected }}-$AERIE_BENCH_REVISION-$settings" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/falcon-bench-bin"
+
+      # A revision's binary depends only on the revision and the settings in
+      # the key, so re-pushes that keep the merge base skip the base build.
+      - name: Restore cached benchmark binary
+        if: steps.schema.outputs.supported == 'true'
+        id: binary-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/falcon-bench-bin
+          key: ${{ steps.key.outputs.binary }}
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        if: steps.schema.outputs.supported == 'true' && steps.binary-cache.outputs.cache-hit != 'true'
+        with:
+          shared-key: falcon-bench
+          # Dependencies only; workspace crates always build from source.
+          cache-workspace-crates: false
+          save-if: ${{ matrix.side == 'head' }}
+
+      - name: Build benchmark binary
+        if: steps.schema.outputs.supported == 'true' && steps.binary-cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          AERIE_BENCH_SELECTOR: .head-selector/scripts/benchmark_targets.py
+          AERIE_BENCH_SIDE: ${{ matrix.side }}
+        run: |
+          set -euo pipefail
+          selector="$(realpath "$AERIE_BENCH_SELECTOR")"
+
+          build_bench() {
+            local source_dir="$1"
+            local output_binary="$2"
+            local target_dir="$3"
+            local revision="$4"
+            local messages="$5"
+            local target features package
+            (
+              cd "$source_dir"
+              cargo metadata --locked --no-deps --format-version=1
+            ) > "$messages.metadata.json"
+            python3 "$selector" falcon --side "$AERIE_BENCH_SIDE" \
+              < "$messages.metadata.json" > "$messages.selection.tsv"
+            IFS=$'\t' read -r target features package _ < "$messages.selection.tsv"
+            (
+              cd "$source_dir"
+              AERIE_BENCH_BUILD_REVISION="$revision" \
+              CARGO_TARGET_DIR="$target_dir" \
+                cargo build --release --locked -p "$package" --bench "$target" \
+                  --no-default-features --features "$features" \
+                  --message-format=json
+            ) | tee "$messages"
+            local executable
+            executable="$(
+              jq -r --arg target "$target" \
+                'select(.reason == "compiler-artifact")
+                 | select(.target.name == $target)
+                 | .executable // empty' \
+                "$messages" | tail -1
+            )"
+            if [ -z "$executable" ] || [ ! -x "$executable" ]; then
+              echo "Cargo did not report the selected Falcon benchmark executable" >&2
+              exit 1
+            fi
+            case "$executable" in
+              "$target_dir"/*) ;;
+              *)
+                echo "Cargo reported an executable outside the isolated target directory" >&2
+                exit 1
+                ;;
+            esac
+            cp "$executable" "$output_binary"
+          }
+
+          build_bench \
+            "$GITHUB_WORKSPACE" \
+            "$RUNNER_TEMP/falcon-bench-bin/falcon" \
+            "$GITHUB_WORKSPACE/target" \
+            "$AERIE_BENCH_REVISION" \
+            "$RUNNER_TEMP/build.jsonl"
+          rustc --version > "$RUNNER_TEMP/falcon-bench-bin/rustc-version.txt"
+
+      - name: Upload benchmark binary
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: falcon-bench-bin-${{ matrix.side }}
+          path: ${{ runner.temp }}/falcon-bench-bin
+          if-no-files-found: error
+          retention-days: 1
+
+  bench:
+    name: ${{ matrix.name }}
+    needs: [resolve, build]
+    # A failed base or head build still reaches the report steps below, so
+    # the PR comment says the benchmark failed.
+    if: ${{ !cancelled() && needs.resolve.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - parameter_set: "512"
+            name: 16K honest signatures
+            title: Falcon benchmark — 16K honest signatures
+            artifact: falcon-bench-data
+            markers: '["<!-- aerie-falcon-bench-report -->"]'
+          # Honest FN-DSA-1024 fixture signatures from the reference fn-dsa
+          # crate with deterministic benchmark randomness: a fixture
+          # measurement, not production key material.
+          - parameter_set: "1024"
+            name: Falcon-1024 16K honest-fixture signatures
+            title: Falcon-1024 benchmark — 16K honest-fixture signatures
+            artifact: falcon-1024-bench-data
+            markers: '["<!-- aerie-falcon-1024-bench-report -->"]'
+    env:
+      AERIE_BENCH_ARTIFACT_NAME: ${{ matrix.artifact }}
+      AERIE_BENCH_HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
+      AERIE_BENCH_BASE_SHA: ${{ needs.resolve.outputs.base_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.resolve.outputs.head_sha }}
+
+      - name: Download head benchmark binary
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: falcon-bench-bin-head
+          path: ${{ runner.temp }}/falcon-bench/downloads/head
+
+      - name: Download base benchmark binary
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: falcon-bench-bin-base
+          path: ${{ runner.temp }}/falcon-bench/downloads/base
+
+      # Cached fixtures are safe to reuse: every run re-parses the corpus and
+      # natively verifies every signature before proving.
+      - name: Restore honest fixtures
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/falcon-bench/fixtures
+          key: falcon-bench-fixtures-v1-${{ matrix.parameter_set }}-${{ hashFiles('Cargo.lock', 'crates/aerie-bench/benches/falcon.rs', 'crates/aerie/benches/falcon.rs', 'crates/aerie-prover/**', 'crates/aerie-verifier/**', 'crates/aerie-falcon-statement/**', 'crates/aerie-falcon-native/**', 'crates/aerie-falcon-witness/**') }}
+
+      - name: Prepare benchmark inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          AERIE_BENCH_ROOT="$RUNNER_TEMP/falcon-bench"
+          echo "AERIE_BENCH_ROOT=$AERIE_BENCH_ROOT" >> "$GITHUB_ENV"
+          mkdir -p "$AERIE_BENCH_ROOT/bins" "$AERIE_BENCH_ROOT/output" "$AERIE_BENCH_ROOT/fixtures"
+          skip_file="$AERIE_BENCH_ROOT/downloads/base/comparison-skipped.txt"
+          if [ -f "$skip_file" ]; then
+            reason="$(cat "$skip_file")"
+            echo "AERIE_BENCH_SKIP_REASON=$reason" >> "$GITHUB_ENV"
+            echo "$reason"
+          fi
+          for side in base head; do
+            downloaded="$AERIE_BENCH_ROOT/downloads/$side/falcon"
+            if [ -f "$downloaded" ]; then
+              install -m 755 "$downloaded" "$AERIE_BENCH_ROOT/bins/falcon-$side"
+            elif [ "$side" != "base" ] || [ ! -f "$skip_file" ]; then
+              echo "::warning::The $side benchmark binary was not built."
+            fi
+          done
+          available_threads="$(nproc)"
+          if [ "$available_threads" -lt 2 ]; then
+            echo "Falcon benchmark requires at least two CPUs" >&2
+            exit 1
+          fi
+          rust="$(cat "$AERIE_BENCH_ROOT/downloads/head/rustc-version.txt" 2>/dev/null || echo unknown)"
+          cpu="$(lscpu | sed -n 's/^Model name:[[:space:]]*//p' | head -1)"
+          {
+            echo "AERIE_BENCH_THREADS=2"
+            echo "AERIE_BENCH_CPU=$cpu"
+            echo "AERIE_BENCH_RUST=$rust"
+          } >> "$GITHUB_ENV"
+          echo "Benchmarking head $AERIE_BENCH_HEAD_SHA against merge base $AERIE_BENCH_BASE_SHA"
+          lscpu
+
+      - name: Run Falcon benchmark
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_args=()
+          if [ -z "${AERIE_BENCH_SKIP_REASON:-}" ]; then
+            base_args=(--base-binary "$AERIE_BENCH_ROOT/bins/falcon-base")
+          fi
+          python3 scripts/falcon_bench_report.py run \
+            --head-binary "$AERIE_BENCH_ROOT/bins/falcon-head" \
+            "${base_args[@]}" \
+            --output-dir "$AERIE_BENCH_ROOT/output" \
+            --fixture-dir "$AERIE_BENCH_ROOT/fixtures" \
+            --head-sha "$AERIE_BENCH_HEAD_SHA" \
+            --base-sha "$AERIE_BENCH_BASE_SHA" \
+            --threads "$AERIE_BENCH_THREADS" \
+            --runner "ubuntu-latest" \
+            --cpu "$AERIE_BENCH_CPU" \
+            --rust-toolchain "$AERIE_BENCH_RUST" \
+            --warmups "$AERIE_BENCH_WARMUPS" \
+            --runs "$AERIE_BENCH_RUNS" \
+            --parameter-set "${{ matrix.parameter_set }}"
+
+      - name: Render benchmark report
+        if: always()
+        shell: bash
+        env:
+          AERIE_BENCH_MARKERS: ${{ matrix.markers }}
+          AERIE_BENCH_TITLE: ${{ matrix.title }}
+        run: |
+          set -euo pipefail
+          summary="$AERIE_BENCH_ROOT/output/summary.json"
+          comment="$AERIE_BENCH_ROOT/output/comment.md"
+          if [ -f "$summary" ]; then
+            python3 scripts/falcon_bench_report.py render "$summary" > "$comment"
+            if [ -n "${AERIE_BENCH_SKIP_REASON:-}" ]; then
+              printf '\n%s\n' "$AERIE_BENCH_SKIP_REASON" >> "$comment"
+            fi
+          else
+            {
+              jq -r '.[0]' <<< "$AERIE_BENCH_MARKERS"
+              echo
+              echo "### $AERIE_BENCH_TITLE"
+              echo
+              echo '> [!WARNING]'
+              echo '> The benchmark failed before it produced a structured summary. See the workflow logs.'
+            } > "$comment"
+          fi
+          cat "$comment" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upsert benchmark PR comment
+        if: >-
+          always() &&
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          AERIE_BENCH_COMMENT: ${{ runner.temp }}/falcon-bench/output/comment.md
+          AERIE_BENCH_MARKERS: ${{ matrix.markers }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = process.env.AERIE_BENCH_COMMENT;
+            if (!fs.existsSync(path)) {
+              core.warning('No Falcon benchmark comment was produced.');
+              return;
+            }
+            const markers = JSON.parse(process.env.AERIE_BENCH_MARKERS);
+            const body = fs.readFileSync(path, 'utf8');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number, per_page: 100 }
+            );
+            const existing = comments.find(comment =>
+              comment.user?.login === 'github-actions[bot]' && markers.some(marker => comment.body?.includes(marker))
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Upload benchmark artifact
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ env.AERIE_BENCH_ARTIFACT_NAME }}
+          path: ${{ runner.temp }}/falcon-bench/output
+          if-no-files-found: warn
+          retention-days: 30

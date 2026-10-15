@@ -1,0 +1,67 @@
+[package]
+name = "aerie-falcon"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Verifier-safe common support for the Aerie Falcon aggregation protocol."
+
+[features]
+default = []
+internals = []
+parallel = [
+  "dep:rayon",
+  "aerie-falcon-native/parallel",
+  "akita-verifier/parallel",
+  "jolt-field/parallel",
+]
+
+[dependencies]
+aerie-keccak = { workspace = true }
+aerie-simd = { workspace = true }
+akita-config = { workspace = true }
+akita-error = { workspace = true }
+jolt-field = { workspace = true }
+akita-params = { workspace = true }
+akita-serialization = { workspace = true }
+akita-sumcheck = { workspace = true }
+akita-transcript = { workspace = true }
+akita-types = { workspace = true }
+akita-verifier = { workspace = true }
+aerie-falcon-native = { workspace = true }
+aerie-pcs-config = { workspace = true }
+rayon = { workspace = true, optional = true }
+aerie-falcon-statement = { workspace = true }
+tracing = { workspace = true }
+spongefish = { workspace = true }
+
+[dev-dependencies]
+sha3-legacy = { workspace = true }
+# Test builds honor AERIE_SIMD_BACKEND so CI can pin each kernel variant.
+aerie-simd = { workspace = true, features = ["backend-override"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+type_complexity = "allow"
+items_after_statements = "allow"
+
+[[bench]]
+name = "ring-functional"
+harness = false
+required-features = ["internals"]

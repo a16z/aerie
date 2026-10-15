@@ -1,0 +1,51 @@
+[package]
+name = "aerie-invariants"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+description = "Aerie checks security invariants across the Falcon aggregation protocol."
+
+[features]
+default = ["parallel"]
+parallel = [
+  "aerie-falcon/parallel",
+  "aerie-prover/parallel",
+  "aerie-falcon-native/parallel",
+  "aerie-falcon-witness/parallel",
+  "jolt-field/parallel",
+]
+
+[dependencies]
+aerie-falcon = { workspace = true, features = ["internals"] }
+aerie-prover = { workspace = true, features = ["internals", "honest-vectors"] }
+aerie-falcon-witness = { workspace = true, features = [
+  "honest-vectors",
+  "test-fixtures",
+] }
+aerie-falcon-native = { workspace = true }
+aerie-falcon-statement = { workspace = true }
+jolt-field = { workspace = true }
+libc = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+module_name_repetitions = "allow"
+doc_markdown = "allow"

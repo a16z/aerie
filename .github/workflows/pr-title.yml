@@ -1,0 +1,39 @@
+name: PR Title
+
+# Conventional Commit titles identify the type of each merge commit.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize, ready_for_review]
+
+permissions: {}
+
+jobs:
+  conventional-title:
+    name: Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          types='feat|fix|chore|docs|refactor|perf|test|build|ci|style|revert|spec|specs|bench|schedules|deps'
+          re="^($types)(\([a-z0-9 ,._/-]+\))?!?: .+"
+
+          if [[ "$TITLE" =~ ^Revert\  ]]; then
+            echo "Revert PR, skipping"
+            exit 0
+          fi
+
+          if [[ "$TITLE" =~ $re ]]; then
+            echo "PR title OK: $TITLE"
+            exit 0
+          fi
+
+          echo "::error::PR title does not follow Conventional Commits: \"$TITLE\""
+          echo "Expected: <type>[optional scope][optional !]: <description>"
+          echo "Types: ${types//|/ }"
+          echo "Examples:"
+          echo "  perf(falcon): overlap prefix-bound proving with the hash lane"
+          echo "  fix(wire): reject a truncated transport frame"
+          echo "  spec: pin the Falcon-1024 shard manifest"
+          exit 1

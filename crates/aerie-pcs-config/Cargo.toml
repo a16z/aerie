@@ -1,0 +1,45 @@
+[package]
+name = "aerie-pcs-config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Aerie configures Akita commitment presets and generated fold-schedule catalogs."
+
+[features]
+# The generated fold-schedule catalog for aerie's fp64 presets. Upstream
+# akita resolves schedules exclusively from generated catalogs (no runtime
+# planner search), so this feature is on by default; turn it off only while
+# regenerating the tables (`cargo test -p aerie-pcs-config --no-default-features
+# --test schedule_catalog_regen -- --ignored --exact regenerate`).
+default = ["schedules-fp64-aerie"]
+schedules-fp64-aerie = []
+
+[dependencies]
+akita-challenges = { workspace = true }
+akita-config = { workspace = true }
+akita-error = { workspace = true }
+akita-params = { workspace = true }
+
+[dev-dependencies]
+akita-planner = { workspace = true, features = ["catalog-gen"] }
+akita-schedules = { workspace = true }
+serde_json = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+too_many_lines = "allow"
+items_after_statements = "allow"

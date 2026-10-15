@@ -1,0 +1,40 @@
+[package]
+name = "aerie"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Aerie provides the public API for Falcon signature aggregation."
+
+[features]
+default = ["prover", "parallel"]
+prover = ["dep:aerie-prover"]
+verifier = []
+parallel = ["aerie-verifier/parallel", "aerie-prover?/parallel"]
+
+[dependencies]
+aerie-verifier = { workspace = true }
+aerie-prover = { workspace = true, optional = true }
+
+[dev-dependencies]
+fn-dsa = { workspace = true }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+
+[[test]]
+name = "facade"
+required-features = ["prover"]

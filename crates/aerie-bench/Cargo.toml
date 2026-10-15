@@ -1,0 +1,65 @@
+[package]
+name = "aerie-bench"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish = false
+description = "Private benchmark harness and profiling for Falcon signature aggregation."
+
+[features]
+default = []
+falcon-bench = [
+  "parallel",
+  "honest-vectors",
+  "aerie-falcon/internals",
+  "aerie-prover/internals",
+]
+parallel = [
+  "aerie-falcon/parallel",
+  "aerie-prover/parallel",
+  "aerie-falcon-witness/parallel",
+]
+honest-vectors = [
+  "aerie-falcon-witness/honest-vectors",
+  "aerie-prover/honest-vectors",
+]
+# Off by default: tracing profiles for the benchmark harness.
+profiling = ["dep:aerie-profiling"]
+# Off by default: dhat heap profiles for `--heap-profile=prove|verify`.
+heap-profile = ["dep:dhat"]
+
+[dependencies]
+aerie-falcon = { workspace = true }
+aerie-prover = { workspace = true }
+aerie-falcon-native = { workspace = true }
+aerie-falcon-witness = { workspace = true }
+aerie-keccak = { workspace = true }
+aerie-simd = { workspace = true }
+rayon = { workspace = true }
+tracing = { workspace = true }
+aerie-profiling = { workspace = true, optional = true }
+dhat = { workspace = true, optional = true }
+
+[lints.rust]
+# The library forbids unsafe code in `src/lib.rs`; only the benchmark's
+# metering allocator allows it.
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+
+[[bench]]
+name = "falcon"
+path = "benches/falcon.rs"
+harness = false
+required-features = ["falcon-bench"]

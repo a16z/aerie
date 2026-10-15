@@ -1,0 +1,95 @@
+[package]
+name = "aerie-prover"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+publish.workspace = true
+description = "Proving API for Aerie Falcon signature aggregation."
+
+[features]
+default = ["parallel"]
+internals = ["aerie-falcon/internals"]
+honest-vectors = ["aerie-falcon-witness/honest-vectors"]
+parallel = [
+  "dep:rayon",
+  "aerie-falcon/parallel",
+  "aerie-falcon-witness/parallel",
+  "akita-pcs/parallel",
+  "akita-verifier/parallel",
+  "jolt-field/parallel",
+]
+
+[dependencies]
+aerie-falcon = { workspace = true }
+aerie-falcon-witness = { workspace = true }
+aerie-falcon-statement = { workspace = true }
+aerie-falcon-native = { workspace = true }
+akita-algebra = { workspace = true }
+akita-config = { workspace = true }
+akita-error = { workspace = true }
+jolt-field = { workspace = true }
+jolt-poly = { workspace = true }
+akita-params = { workspace = true }
+akita-pcs = { workspace = true }
+akita-serialization = { workspace = true }
+akita-sumcheck = { workspace = true }
+akita-transcript = { workspace = true }
+akita-types = { workspace = true }
+akita-verifier = { workspace = true }
+tracing = { workspace = true }
+shake = { workspace = true }
+spongefish = { workspace = true }
+rayon = { workspace = true, optional = true }
+
+[dev-dependencies]
+aerie-falcon = { workspace = true, features = ["internals"] }
+# Test builds honor AERIE_SIMD_BACKEND so CI can pin each kernel variant.
+aerie-simd = { workspace = true, features = ["backend-override"] }
+aerie-falcon-witness = { workspace = true, features = [
+  "honest-vectors",
+  "test-fixtures",
+] }
+
+[package.metadata.cargo-machete]
+# Enables backend-override on transitive aerie-simd for test builds.
+ignored = ["aerie-simd"]
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+many_single_char_names = "allow"
+cast_possible_truncation = "allow"
+cast_sign_loss = "allow"
+cast_possible_wrap = "allow"
+cast_precision_loss = "allow"
+similar_names = "allow"
+too_many_lines = "allow"
+type_complexity = "allow"
+items_after_statements = "allow"
+
+[[bench]]
+name = "projection"
+harness = false
+required-features = ["internals"]
+
+[[bench]]
+name = "ring-table"
+harness = false
+required-features = ["internals"]
+
+[[test]]
+name = "adversarial"
+required-features = ["internals"]
+
+[[example]]
+name = "generate_wire_fuzz_seeds"
+path = "examples/generate_wire_fuzz_seeds.rs"
+required-features = ["internals", "honest-vectors"]

@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Registry dependencies only. The akita stack is a git dependency pinned
+  # by rev (see workspace Cargo.toml); dependabot does not touch git pins.
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
