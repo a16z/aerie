@@ -166,6 +166,10 @@ fn parse_public_statement<P: FalconParams>(
     if count == 0 {
         return Err(ProductionError::InvalidBatchLength(0));
     }
+    // Each record needs a version, key length, fixed-size key, and message
+    // length even when its message is empty. The bounded count and sealed
+    // parameter sets keep this product within usize on supported targets.
+    reader.ensure_remaining(count * (1 + 4 + P::PUBLIC_KEY_BYTES + 4))?;
     let mut records = Vec::with_capacity(count);
     for _ in 0..count {
         if reader.u8()? != 1 {
@@ -197,6 +201,16 @@ impl<'a> WireReader<'a> {
     #[must_use]
     pub const fn new(bytes: &'a [u8]) -> Self {
         Self { bytes, position: 0 }
+    }
+
+    /// Check an input-size lower bound before allocating, without consuming it.
+    pub fn ensure_remaining(&self, length: usize) -> Result<(), ProductionError> {
+        if length > self.bytes.len() - self.position {
+            return Err(ProductionError::MalformedWire(
+                "truncated aggregate input".to_owned(),
+            ));
+        }
+        Ok(())
     }
 
     pub fn take(&mut self, length: usize) -> Result<&'a [u8], ProductionError> {
@@ -353,6 +367,29 @@ impl From<DirectError> for ProductionError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn canonical_statement_roundtrips_empty_and_variable_length_messages() {
+        fn check<P: FalconParams>() {
+            let mut bytes = vec![0; P::PUBLIC_KEY_BYTES];
+            bytes[0] = P::PUBLIC_KEY_HEADER;
+            let key = CanonicalPublicKeyBytes::<P>::parse(&bytes).unwrap();
+            for messages in [vec![vec![]], vec![vec![], vec![42; 37], vec![1]]] {
+                let records = messages
+                    .into_iter()
+                    .map(|message| AggregationRecord::new(key.clone(), message).unwrap())
+                    .collect();
+                let statement = AggregationStatement::new(records).unwrap();
+                let encoding = statement.canonical_encoding().unwrap();
+                assert_eq!(
+                    AggregationStatement::<P>::parse_canonical(&encoding).unwrap(),
+                    statement
+                );
+            }
+        }
+        check::<aerie_falcon_native::Falcon512>();
+        check::<aerie_falcon_native::Falcon1024>();
+    }
 
     #[test]
     fn cataloged_power_of_two_batch_lengths_are_accepted() {

@@ -92,6 +92,7 @@ dependencies = [
  "aerie-falcon-native",
  "aerie-falcon-statement",
  "akita-algebra",
+ "dhat",
  "fn-dsa",
  "rayon",
  "shake",

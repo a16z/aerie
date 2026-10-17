@@ -223,6 +223,9 @@ fn parse_aggregate_witness<P: FalconParams>(
     if count == 0 {
         return Err(ProductionError::InvalidBatchLength(0));
     }
+    // Signatures have fixed wire sizes. Validate the complete table before
+    // reserving it; the bounded count and sealed parameter sets fit usize.
+    reader.ensure_remaining(count * P::SIGNATURE_BYTES)?;
     let mut signatures = Vec::with_capacity(count);
     for _ in 0..count {
         signatures.push(CanonicalSignatureBytes::<P>::parse(
@@ -335,19 +338,29 @@ mod tests {
 
     #[test]
     fn aggregate_statement_and_witness_wire_roundtrip() {
-        let (public, witness) = statement(7);
-        let public_bytes = public.canonical_encoding().unwrap();
-        let witness_bytes = witness.canonical_encoding().unwrap();
-        assert_eq!(&public_bytes[..2], &1_u16.to_le_bytes());
-        assert_eq!(&public_bytes[2..6], &1_u32.to_le_bytes());
-        assert_eq!(
-            AggregationStatement::<Falcon512>::parse_canonical(&public_bytes).unwrap(),
-            public
-        );
-        assert_eq!(
-            AggregationWitness::<Falcon512>::parse_canonical(&witness_bytes).unwrap(),
-            witness
-        );
+        fn check<P: FalconParams>() {
+            for count in [1, 3] {
+                let (public, witness) = constructed_aggregation::<P>(count).unwrap();
+                let public_bytes = public.canonical_encoding().unwrap();
+                let witness_bytes = witness.canonical_encoding().unwrap();
+                assert_eq!(&public_bytes[..2], &1_u16.to_le_bytes());
+                assert_eq!(&public_bytes[2..6], &(count as u32).to_le_bytes());
+                assert_eq!(
+                    AggregationStatement::<P>::parse_canonical(&public_bytes).unwrap(),
+                    public
+                );
+                assert_eq!(
+                    AggregationWitness::<P>::parse_canonical(&witness_bytes).unwrap(),
+                    witness
+                );
+                assert!(AggregationWitness::<P>::parse_canonical(
+                    &witness_bytes[..witness_bytes.len() - 1]
+                )
+                .is_err());
+            }
+        }
+        check::<Falcon512>();
+        check::<aerie_falcon_native::Falcon1024>();
     }
 
     #[test]
