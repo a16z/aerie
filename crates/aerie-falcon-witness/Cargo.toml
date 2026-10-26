@@ -30,6 +30,7 @@ shake = { workspace = true }
 tracing = { workspace = true }
 
 [dev-dependencies]
+dhat = { workspace = true }
 fn-dsa = { workspace = true }
 
 [lints.rust]

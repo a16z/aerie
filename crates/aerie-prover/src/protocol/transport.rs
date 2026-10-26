@@ -11,11 +11,9 @@ use super::AggregationParams;
 use super::{
     public_records_binding::public_records_binding_of, wire::TRANSPORT_SALT_BYTES, FalconWitness,
 };
-use crate::AggregationError as Error;
 #[cfg(any(test, feature = "internals"))]
 use crate::StatementMismatch;
-#[cfg(test)]
-use crate::UnsupportedBatch;
+use crate::{AggregationError as Error, UnsupportedBatch};
 #[cfg(any(test, feature = "internals"))]
 use aerie_falcon::protocol::transport::derived_ring_keys;
 #[cfg(any(test, feature = "internals"))]
@@ -137,6 +135,15 @@ fn prove_aggregate_impl<P: AggregationParams>(
             }
             .into(),
         );
+    }
+    // The early s2 commitment uses the setup's manifest, so reject a live-count
+    // mismatch before decoding signatures or preparing either witness path.
+    if setup.records() != statement.len() {
+        return Err(UnsupportedBatch::SetupSize {
+            expected: setup.records(),
+            actual: statement.len(),
+        }
+        .into());
     }
     let total_start = std::time::Instant::now();
     mode.validate(
@@ -331,6 +338,32 @@ mod tests {
         witness: &AggregationWitness<P>,
     ) -> Result<(Vec<u8>, AggregateProveMetrics), Error> {
         prove_aggregate_measured_with_mode(setup, statement, witness, SaltMode::PerRecord)
+    }
+
+    #[test]
+    fn aggregate_prover_rejects_a_different_setup_record_count() {
+        fn check<P: AggregationParams>() {
+            let setup = FalconAggregateSetup::<P>::new(8).unwrap();
+            // Five records share the setup's padded shape; nine require a
+            // larger one. Both must report the live-count mismatch.
+            for records in [5, 9] {
+                let (statement, witness) = constructed_aggregation::<P>(records).unwrap();
+                let result = prove_aggregate(&setup, &statement, &witness);
+                assert!(
+                    matches!(
+                        result,
+                        Err(Error::UnsupportedBatch(UnsupportedBatch::SetupSize {
+                            expected: 8,
+                            actual,
+                        })) if actual == records
+                    ),
+                    "{} with {records} records: {result:?}",
+                    P::NAME
+                );
+            }
+        }
+        check::<Falcon512>();
+        check::<Falcon1024>();
     }
 
     struct Fixture {
