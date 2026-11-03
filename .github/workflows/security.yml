@@ -30,7 +30,7 @@ jobs:
           cache: false
       # Policy in deny.toml: RustSec advisories, the license allowlist, and
       # the closed set of git sources (the pinned akita and jolt trees).
-      - uses: EmbarkStudios/cargo-deny-action@08f29ebbc9295095546acaf37220058f628a4720 # v2
+      - uses: EmbarkStudios/cargo-deny-action@9c67a826e39827395bfa619cd85cb2aaeb43cfaa # v2
         with:
           command: check bans licenses sources advisories
 
