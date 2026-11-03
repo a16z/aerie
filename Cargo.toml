@@ -109,7 +109,7 @@ serde_json = "1"
 shake = "0.1.0"
 sha3-legacy = { package = "sha3", version = "0.10.9" }
 # Trimmed features: the monitor needs only system (CPU + process) info.
-sysinfo = { version = "0.39", default-features = false, features = ["system"] }
+sysinfo = { version = "0.40", default-features = false, features = ["system"] }
 # Already in the audited lockfile transitively (akita, jolt); declaring it here
 # adds no new packages.
 thiserror = "2"
